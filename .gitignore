@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# Scons
+.sconsign.dblite
+build
+bin
+output_*

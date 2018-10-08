@@ -1,0 +1,43 @@
+# main sconscript
+print '..Building src/'
+
+import os
+
+# import build environment
+Import('env')
+# make a copy
+env = env.Clone()
+
+# add current directory as the include path
+env.Append(CPPPATH=['.'])
+
+# define target classes
+class UnitTest:
+    all = []
+    def __init__(self, target, *srcs):
+        self.target = '../bin/unittest/%s' % (target)
+        self.srcs = []
+        for src in srcs:
+            self.srcs.append('tests/%s' % (src))
+        UnitTest.all.append(self)
+
+Export('UnitTest')
+
+common_srcs = []
+# iterate over lower level sconscript files
+for root,dirs,files in os.walk(os.getcwd()):
+    for dirname in dirs:
+        scon_script = '%s/SConscript' % (dirname)
+        if os.path.isfile(scon_script):
+            env.SConscript(scon_script)
+        else:
+            globStr = '%s/*.cc' % dirname
+            common_srcs.append(Glob(globStr))
+
+# build unit tests
+for unit_test in UnitTest.all:
+    print '..Building %s' % (unit_test.target)
+    srcs = common_srcs
+    srcs.append(unit_test.srcs)
+    env.Program(target = unit_test.target, source = srcs)
+
