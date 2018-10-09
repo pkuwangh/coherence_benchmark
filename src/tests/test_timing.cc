@@ -22,13 +22,13 @@ int main()
     std::ofstream ofs;
     ofs.open("output_lib_timing");
 
-    lib_timing::start_timer("stdout");
+    utils::start_timer("stdout");
     run();
-    lib_timing::start_timer("fileout");
+    utils::start_timer("fileout");
     run();
     run();
-    lib_timing::end_timer("stdout", std::cout);
-    lib_timing::end_timer("fileout", ofs);
+    utils::end_timer("stdout", std::cout);
+    utils::end_timer("fileout", ofs);
 
     ofs.close();
 

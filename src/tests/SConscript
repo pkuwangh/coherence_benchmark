@@ -5,4 +5,5 @@ Import('*')
 
 # add unit-test targets
 UnitTest('test_timing', 'test_timing.cc')
+UnitTest('test_mem_region', 'test_mem_region.cc')
 

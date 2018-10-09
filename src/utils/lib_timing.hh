@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <string>
 
-namespace lib_timing {
+namespace utils {
 
 class Timer {
   public:

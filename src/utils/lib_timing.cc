@@ -1,6 +1,6 @@
 #include "utils/lib_timing.hh"
 
-namespace lib_timing {
+namespace utils {
 
 void Timer::startTimer() {
     time_point_begin_ = std::chrono::steady_clock::now();
@@ -29,6 +29,5 @@ void end_timer(const std::string& timer_key, std::ostream& os) {
         os << "Timer error ..." << std::endl;
     }
 }
-
 
 }
