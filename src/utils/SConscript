@@ -1,0 +1,8 @@
+# utils sconscript
+#print '..Adding utils'
+
+Import('*')
+
+# add source files
+SourceFile('lib_timing.cc')
+

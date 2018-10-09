@@ -11,33 +11,50 @@ env = env.Clone()
 # add current directory as the include path
 env.Append(CPPPATH=['.'])
 
-# define target classes
-class UnitTest:
+# current path relative to top-level SConscript, i.e. myself
+current_path = '.'
+
+# define source & target classes
+class SourceFile:
     all = []
-    def __init__(self, target, *srcs):
-        self.target = '../bin/unittest/%s' % (target)
+    def __init__(self, *srcs):
         self.srcs = []
         for src in srcs:
-            self.srcs.append('tests/%s' % (src))
+            self.srcs.append(os.path.join(current_path, src))
+        SourceFile.all.append(self)
+
+class BuildTarget:
+    all = []
+    def __init__(self, target_type, target_name, *srcs):
+        self.target = '../bin/%s/%s' % (target_type, target_name)
+        self.srcs = []
+        for src in srcs:
+            self.srcs.append(os.path.join(current_path, src))
         UnitTest.all.append(self)
 
+class UnitTest(BuildTarget):
+    def __init__(self, target, *srcs):
+        BuildTarget.__init__(self, 'unittest', target, *srcs)
+
+Export('SourceFile')
 Export('UnitTest')
 
-common_srcs = []
 # iterate over lower level sconscript files
 for root,dirs,files in os.walk(os.getcwd()):
     for dirname in dirs:
-        scon_script = '%s/SConscript' % (dirname)
-        if os.path.isfile(scon_script):
-            env.SConscript(scon_script)
-        else:
-            globStr = '%s/*.cc' % dirname
-            common_srcs.append(Glob(globStr))
+        current_path = dirname
+        env.SConscript('%s/SConscript' % (dirname))
 
-# build unit tests
-for unit_test in UnitTest.all:
-    print '..Building %s' % (unit_test.target)
-    srcs = common_srcs
-    srcs.append(unit_test.srcs)
-    env.Program(target = unit_test.target, source = srcs)
+# add common sources
+common_srcs = []
+for source_file in SourceFile.all:
+    print '..Adding %s' % (source_file.srcs)
+    common_srcs.append(source_file.srcs)
+
+# build targets
+for build_target in BuildTarget.all:
+    print '..Building %s' % (build_target.target)
+    srcs = list(common_srcs)
+    srcs.append(build_target.srcs)
+    env.Program(target=build_target.target, source=srcs)
 

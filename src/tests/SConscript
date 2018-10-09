@@ -1,5 +1,5 @@
 # unit-test sconscript
-print '..Adding unit tests'
+#print '..Adding unit tests'
 
 Import('*')
 
