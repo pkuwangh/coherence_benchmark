@@ -1,0 +1,8 @@
+# unit-test sconscript
+#print '..Adding misc tests'
+
+Import('*')
+
+# add unit-test targets
+MiscTest('lat_mem_rd', 'lat_mem_rd.cc')
+

@@ -36,12 +36,18 @@ class UnitTest(BuildTarget):
     def __init__(self, target, *srcs):
         BuildTarget.__init__(self, 'unittest', target, *srcs)
 
+class MiscTest(BuildTarget):
+    def __init__(self, target, *srcs):
+        BuildTarget.__init__(self, 'misctest', target, *srcs)
+
 Export('SourceFile')
 Export('UnitTest')
+Export('MiscTest')
 
 # iterate over lower level sconscript files
 for root,dirs,files in os.walk(os.getcwd()):
     for dirname in dirs:
+        print dirname
         current_path = dirname
         env.SConscript('%s/SConscript' % (dirname))
 
