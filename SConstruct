@@ -9,16 +9,15 @@ common_env = Environment(
         CXXFLAGS=[],
         SCONS_CXX_STANDARD='c++11')
 
-# TODO: make this work across platforms
-common_env.Append(CXXFLAGS=['-std=c++11'])
-
 build_envs = {}
 
-# release build based on common build environment
+# x86-platform build based on common build environment
 release_env = common_env.Clone()
-release_env.VariantDir('build/release/src', 'src', duplicate=0)
-release_env.VariantDir('build/release/regress', 'regress', duplicate=0)
-build_envs['release'] = release_env
+release_env.VariantDir('build/x86/src', 'src', duplicate=0)
+release_env.VariantDir('build/x86/regress', 'regress', duplicate=0)
+release_env.Append(CXXFLAGS=['-std=c++11'])
+
+build_envs['x86'] = release_env
 
 # iterate and invoke the lower level sconscript files
 for mode,env in build_envs.iteritems():

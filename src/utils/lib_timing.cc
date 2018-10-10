@@ -9,7 +9,7 @@ void Timer::startTimer() {
 void Timer::endTimer(std::ostream& os) {
     time_point_end_ = std::chrono::steady_clock::now();
     os << std::chrono::duration_cast<std::chrono::duration<float>>(time_point_end_ - time_point_begin_).count()
-        << std::endl;
+        << '\n';
 }
 
 
@@ -22,6 +22,7 @@ void start_timer(const std::string& timer_key) {
 
 void end_timer(const std::string& timer_key, std::ostream& os) {
     try {
+        os << "timer <" << timer_key << ">: elapsed time ";
         (g_timer_map.at(timer_key))->endTimer(os);
     } catch (const std::out_of_range& oor) {
         os << "Out of range error: " << oor.what() << std::endl;

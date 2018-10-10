@@ -6,7 +6,7 @@
 
 int main()
 {
-    const uint64_t loop_count = 10000000;
+    const uint64_t loop_count = 50000000;
     double sum = 1;
 
     auto run = [&sum, &loop_count]() -> void {
@@ -22,12 +22,16 @@ int main()
     std::ofstream ofs;
     ofs.open("output_lib_timing");
 
-    utils::start_timer("stdout");
+    utils::start_timer("stdout1");
     run();
+    utils::start_timer("stdout2");
     utils::start_timer("fileout");
     run();
     run();
-    utils::end_timer("stdout", std::cout);
+    utils::end_timer("stdout2", std::cout);
+    run();
+    run();
+    utils::end_timer("stdout1", std::cout);
     utils::end_timer("fileout", ofs);
 
     ofs.close();
