@@ -5,19 +5,20 @@ print '..Building Coherence Benchmark'
 common_env = Environment(
         CPPPATH=[],
         CPPDEFINES=[],
-        LIBS=[],
+        LIBS=['pthread'],
         CXXFLAGS=[],
         SCONS_CXX_STANDARD='c++11')
 
 build_envs = {}
 
 # x86-platform build based on common build environment
-release_env = common_env.Clone()
-release_env.VariantDir('build/x86/src', 'src', duplicate=0)
-release_env.VariantDir('build/x86/regress', 'regress', duplicate=0)
-release_env.Append(CXXFLAGS=['-std=c++11'])
+x86_env = common_env.Clone()
+x86_env.VariantDir('build/x86/src', 'src', duplicate=0)
+x86_env.VariantDir('build/x86/regress', 'regress', duplicate=0)
+x86_env.Append(CXXFLAGS=['-std=c++11', '-pthread'])
+#x86_env.Append(CXXFLAGS=['-g'])
 
-build_envs['x86'] = release_env
+build_envs['x86'] = x86_env
 
 # iterate and invoke the lower level sconscript files
 for mode,env in build_envs.iteritems():

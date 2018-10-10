@@ -23,7 +23,8 @@ void start_timer(const std::string& timer_key) {
 void end_timer(const std::string& timer_key, std::ostream& os) {
     try {
         os << "timer <" << timer_key << ">: elapsed time ";
-        (g_timer_map.at(timer_key))->endTimer(os);
+        const Timer::Handle& timer = g_timer_map.at(timer_key);
+        timer->endTimer(os);
     } catch (const std::out_of_range& oor) {
         os << "Out of range error: " << oor.what() << std::endl;
     } catch (...) {
