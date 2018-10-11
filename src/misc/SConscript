@@ -3,6 +3,6 @@
 
 Import('*')
 
-# add unit-test targets
+# add misc-test targets
 MiscTest('lat_mem_rd', 'lat_mem_rd.cc')
 MiscTest('pthread_mutex', 'pthread_mutex.cc')

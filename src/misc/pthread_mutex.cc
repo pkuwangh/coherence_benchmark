@@ -1,7 +1,10 @@
 #include <iostream>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <pthread.h>
+#include <sched.h>
+#include <sys/sysinfo.h>
 
 #include "utils/lib_mem_region.hh"
 #include "utils/lib_timing.hh"
@@ -43,7 +46,7 @@ void *thread_work(void *ptr) {
     utils::start_timer(timer_work);
     pthread_mutex_unlock(&g_timer_mutex);
     // real work
-    const uint64_t loop_count = 20000000 * 1;
+    const uint64_t loop_count = 20000000 * 20;
     double sum = 1;
     for (uint64_t i = 1; i <= loop_count; ++i) {
         if (i % 2 == 0) {
@@ -65,18 +68,43 @@ void *thread_work(void *ptr) {
 
 int main(int argc, char **argv)
 {
+    uint32_t thread_step = 1;
+    if (argc > 1) {
+        thread_step = atoi(argv[1]);
+    }
     // init locks
     pthread_mutex_init(&g_timer_mutex, NULL);
     pthread_mutex_init(&g_flow_mutex, NULL);
     pthread_cond_init(&g_flow_cond, NULL);
     g_flow_step = 0;
-    // create threads
-    const uint32_t num_threads = 16;
-    std::vector<pthread_t> threads(num_threads);
+    // prepare thread attrs, packets
+    const uint32_t num_threads = get_nprocs();
+    if (num_threads % thread_step > 0) {
+        std::cout << "expect num_threads=" << num_threads << " is a multiple of thread_step=" << thread_step << std::endl;
+        exit(1);
+    }
+    const uint32_t group_size = num_threads / thread_step;
+    std::vector<pthread_attr_t> attrs(num_threads);
     std::vector<ThreadPacket> packets(num_threads, 0);
-    for (uint32_t i = 0; i < threads.size(); ++i) {
+    for (uint32_t i = 0; i < num_threads; ++i) {
+        // get thread - core mapping
+        const uint32_t group_id = i / group_size;
+        const uint32_t group_offset = i % group_size;
+        const uint32_t core_id = group_id + group_offset * thread_step;
+        //std::cout << "thread " << i << " -> core " << core_id << std::endl;
+        // set thread attribute
+        pthread_attr_init(&attrs[i]);
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(core_id, &cpuset);
+        pthread_attr_setaffinity_np(&attrs[i], sizeof(cpu_set_t), &cpuset);
+        // set packet passed to thread
         packets[i] = i;
-        pthread_create(&threads[i], NULL, thread_work, (void*)(&packets[i]));
+    }
+    // create threads
+    std::vector<pthread_t> threads(num_threads);
+    for (uint32_t i = 0; i < threads.size(); ++i) {
+        pthread_create(&threads[i], &attrs[i], thread_work, (void*)(&packets[i]));
     }
     // wait threads
     for (uint32_t i = 0; i < threads.size(); ++i) {
