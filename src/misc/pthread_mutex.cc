@@ -20,7 +20,6 @@ class ThreadPacket {
 };
 
 // global defined locks
-pthread_mutex_t g_timer_mutex;
 pthread_mutex_t g_flow_mutex;
 pthread_cond_t  g_flow_cond;
 uint32_t g_flow_step;
@@ -33,18 +32,14 @@ void *thread_work(void *ptr) {
     std::string timer_full = thread_sign + " full";
     std::string timer_work = thread_sign + " work";
     // start full timer
-    pthread_mutex_lock(&g_timer_mutex);
     utils::start_timer(timer_full);
-    pthread_mutex_unlock(&g_timer_mutex);
     // cond_wait w/ cond variable
     pthread_mutex_lock(&g_flow_mutex);
     while (g_flow_step != pkt->thread_id) {
         pthread_cond_wait(&g_flow_cond, &g_flow_mutex);
     }
     // start work timer
-    pthread_mutex_lock(&g_timer_mutex);
     utils::start_timer(timer_work);
-    pthread_mutex_unlock(&g_timer_mutex);
     // real work
     const uint64_t loop_count = 20000000 * 20;
     double sum = 1;
@@ -73,7 +68,6 @@ int main(int argc, char **argv)
         thread_step = atoi(argv[1]);
     }
     // init locks
-    pthread_mutex_init(&g_timer_mutex, NULL);
     pthread_mutex_init(&g_flow_mutex, NULL);
     pthread_cond_init(&g_flow_cond, NULL);
     g_flow_step = 0;
@@ -111,7 +105,6 @@ int main(int argc, char **argv)
         pthread_join(threads[i], NULL);
     }
     // destroy locks
-    pthread_mutex_destroy(&g_timer_mutex);
     pthread_mutex_destroy(&g_flow_mutex);
     pthread_cond_destroy(&g_flow_cond);
 
