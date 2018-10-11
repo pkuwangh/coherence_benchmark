@@ -6,4 +6,3 @@ Import('*')
 # add source files
 SourceFile('lib_timing.cc')
 SourceFile('lib_mem_region.cc')
-

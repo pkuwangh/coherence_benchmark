@@ -8,20 +8,20 @@ namespace utils {
 
 MemRegion::MemRegion(
         uint32_t size,
-        uint32_t pageSize,
-        uint32_t lineSize) :
+        uint32_t page_size,
+        uint32_t line_size) :
     size_ (size),
-    pageSize_ (pageSize),
-    lineSize_ (lineSize),
-    numPages_ (size_ / pageSize_),
-    numLinesInPage_ (pageSize_ / lineSize_)
+    page_size_ (page_size),
+    line_size_ (line_size),
+    num_pages_ (size_ / page_size_),
+    num_lines_in_page_ (page_size_ / line_size_)
 {
     // allocate a little extra space for page alignment
-    addr_.reset(new char[size_ + 2 * pageSize_]);
+    addr_.reset(new char[size_ + 2 * page_size_]);
     // point base_ to page-aligned addr
     base_ = addr_.get();
-    if ((uint64_t)base_ % (uint64_t)pageSize_) {
-        base_ += pageSize_ - (uint64_t)base_ % pageSize_;
+    if ((uint64_t)base_ % (uint64_t)page_size_) {
+        base_ += page_size_ - (uint64_t)base_ % page_size_;
     }
     // use a fixed seed
     srand(0);
@@ -48,29 +48,29 @@ void MemRegion::stride_init()
 {
     char* addr = base_;
     uint32_t i;
-    for (i = lineSize_; i < size_; i += lineSize_) {
-        *(char **)(&addr[i - lineSize_]) = (char*)&addr[i];
+    for (i = line_size_; i < size_; i += line_size_) {
+        *(char **)(&addr[i - line_size_]) = (char*)&addr[i];
     }
-    *(char **)&addr[i - lineSize_] = (char*)&addr[0];
+    *(char **)&addr[i - line_size_] = (char*)&addr[0];
 }
 
 // create a circular list of pointers with random-in-page
 void MemRegion::page_random_init()
 {
-    std::vector<uint32_t> pages_(numPages_, 0);
-    std::vector<uint32_t> linesInPage_(numLinesInPage_, 0);
-    randomizeSequence_(pages_, numPages_, pageSize_);
-    randomizeSequence_(linesInPage_, numLinesInPage_, lineSize_);
+    std::vector<uint32_t> pages_(num_pages_, 0);
+    std::vector<uint32_t> linesInPage_(num_lines_in_page_, 0);
+    randomizeSequence_(pages_, num_pages_, page_size_);
+    randomizeSequence_(linesInPage_, num_lines_in_page_, line_size_);
     // run through the pages
-    for (uint32_t i = 0; i < numPages_; ++i) {
+    for (uint32_t i = 0; i < num_pages_; ++i) {
         // run through the lines within a page
-        for (uint32_t j = 0; j < numLinesInPage_ - 1; ++j) {
+        for (uint32_t j = 0; j < num_lines_in_page_ - 1; ++j) {
             *(char**)(base_ + pages_.at(i) + linesInPage_.at(j))
                 = base_ + pages_.at(i) + linesInPage_.at(j+1);
         }
         // jump the next page
-        uint32_t next_page = (i == numPages_ - 1) ? 0 : (i + 1);
-        *(char**)(base_ + pages_.at(i) + linesInPage_.at(numLinesInPage_ - 1))
+        uint32_t next_page = (i == num_pages_ - 1) ? 0 : (i + 1);
+        *(char**)(base_ + pages_.at(i) + linesInPage_.at(num_lines_in_page_ - 1))
             = base_ + pages_.at(next_page) + linesInPage_.at(0);
     }
 }
@@ -80,7 +80,7 @@ void MemRegion::all_random_init()
 {
     const uint32_t num_lines = numLines();
     std::vector<uint32_t> lines_(num_lines, 0);
-    randomizeSequence_(lines_, num_lines, lineSize_);
+    randomizeSequence_(lines_, num_lines, line_size_);
     // run through the lines
     for (uint32_t i = 0; i < num_lines - 1; ++i) {
         *(char**)(base_ + lines_.at(i)) = base_ + lines_.at(i+1);
@@ -91,13 +91,13 @@ void MemRegion::all_random_init()
 void MemRegion::dump()
 {
     std::cout << "================================" << std::endl;
-    std::cout << "size=" << size_ << ", page=" << pageSize_ << ", line=" << lineSize_
-        << ", numPage=" << numPages_ << ", numLinesInPage=" << numLinesInPage_ << std::endl;
-    for (uint32_t i = 0; i < size_; i += lineSize_) {
+    std::cout << "size=" << size_ << ", page=" << page_size_ << ", line=" << line_size_
+        << ", numPage=" << num_pages_ << ", numLinesInPage=" << num_lines_in_page_ << std::endl;
+    for (uint32_t i = 0; i < size_; i += line_size_) {
         uint64_t curr = reinterpret_cast<uint64_t>(base_ + i);
         uint64_t next = reinterpret_cast<uint64_t>(*(char**)(base_ + i));
-        uint64_t curr_offset = (curr - reinterpret_cast<uint64_t>((char**)base_)) / lineSize_;
-        uint64_t next_offset = (next - reinterpret_cast<uint64_t>((char**)base_)) / lineSize_;
+        uint64_t curr_offset = (curr - reinterpret_cast<uint64_t>((char**)base_)) / line_size_;
+        uint64_t next_offset = (next - reinterpret_cast<uint64_t>((char**)base_)) / line_size_;
         std::cout << std::hex << "[0x" << curr << "]: 0x" << next << std::dec << "  ";
         std::cout << std::setw(8) << std::right << curr_offset << ": " << std::setw(8) << std::left << next_offset;
         std::cout << std::endl;
@@ -107,8 +107,8 @@ void MemRegion::dump()
     for (uint32_t i = 0; i < numLines(); ++i) {
         uint64_t curr = reinterpret_cast<uint64_t>(p);
         uint64_t next = reinterpret_cast<uint64_t>(*p);
-        uint64_t curr_offset = (curr - reinterpret_cast<uint64_t>((char**)base_)) / lineSize_;
-        uint64_t next_offset = (next - reinterpret_cast<uint64_t>((char**)base_)) / lineSize_;
+        uint64_t curr_offset = (curr - reinterpret_cast<uint64_t>((char**)base_)) / line_size_;
+        uint64_t next_offset = (next - reinterpret_cast<uint64_t>((char**)base_)) / line_size_;
         std::cout << std::hex << "[0x" << curr << "]: 0x" << next << std::dec << "  ";
         std::cout << std::setw(8) << std::right << curr_offset << ": " << std::setw(8) << std::left << next_offset;
         if (next > curr) {
