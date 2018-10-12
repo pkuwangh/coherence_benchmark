@@ -40,9 +40,14 @@ class MiscTest(BuildTarget):
     def __init__(self, target, *srcs):
         BuildTarget.__init__(self, 'misctest', target, *srcs)
 
+class Benchmark(BuildTarget):
+    def __init__(self, target, *srcs):
+        BuildTarget.__init__(self, 'benchmark', target, *srcs)
+
 Export('SourceFile')
 Export('UnitTest')
 Export('MiscTest')
+Export('Benchmark')
 
 # iterate over lower level sconscript files
 for root,dirs,files in os.walk(os.getcwd()):
