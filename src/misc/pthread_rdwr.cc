@@ -11,7 +11,10 @@
 #include "misc/pthread_rdwr.hh"
 
 // global defined lock
-pthread_rwlock_t g_flow_rwlock;
+pthread_mutex_t g_flow_mutex;
+pthread_cond_t  g_flow_cond;
+pthread_rwlock_t g_flow_rwlock;   // probably not necessary
+uint32_t g_flow_step;
 
 // thread function
 void *writer_thread(void *ptr) {
@@ -23,6 +26,7 @@ void *writer_thread(void *ptr) {
     // start full timer
     utils::start_timer(timer_full);
     // write lock
+    pthread_mutex_lock(&g_flow_mutex);
     pthread_rwlock_wrlock(&g_flow_rwlock);
     // start work timer
     utils::start_timer(timer_work);
@@ -42,6 +46,9 @@ void *writer_thread(void *ptr) {
         utils::end_timer(timer_work, std::cout);
     }
     // unlock
+    ++ g_flow_step;
+    pthread_cond_broadcast(&g_flow_cond);
+    pthread_mutex_unlock(&g_flow_mutex);
     pthread_rwlock_unlock(&g_flow_rwlock);
 }
 
@@ -54,6 +61,11 @@ void *reader_thread(void *ptr) {
     // start full timer
     utils::start_timer(timer_full);
     // read lock
+    pthread_mutex_lock(&g_flow_mutex);
+    while (g_flow_step == 0) {
+        pthread_cond_wait(&g_flow_cond, &g_flow_mutex);
+    }
+    pthread_mutex_unlock(&g_flow_mutex);
     pthread_rwlock_rdlock(&g_flow_rwlock);
     // start work timer
     utils::start_timer(timer_work);
@@ -84,6 +96,8 @@ int main(int argc, char **argv)
     }
     // init locks
     pthread_rwlock_init(&g_flow_rwlock, NULL);
+    pthread_mutex_init(&g_flow_mutex, NULL);
+    pthread_cond_init(&g_flow_cond, NULL);
     // thread attrs
     const uint32_t num_threads = get_nprocs();
     utils::ThreadHelper<ThreadPacket> threads(num_threads, thread_step);
@@ -94,6 +108,8 @@ int main(int argc, char **argv)
     threads.join();
     // destroy locks
     pthread_rwlock_destroy(&g_flow_rwlock);
+    pthread_mutex_destroy(&g_flow_mutex);
+    pthread_cond_destroy(&g_flow_cond);
 
     return 0;
 }
