@@ -31,7 +31,7 @@ class ThreadHelper {
         packets_ (num_threads)
     {
         if (num_threads % thread_step > 0) {
-            std::cout << "expect num_threads=" << num_threads << " to be a multiple of thread_step=" << thread_step << std::endl;
+            std::cerr << "expect num_threads=" << num_threads << " to be a multiple of thread_step=" << thread_step << std::endl;
             exit(1);
         }
         const uint32_t group_size = num_threads / thread_step;
