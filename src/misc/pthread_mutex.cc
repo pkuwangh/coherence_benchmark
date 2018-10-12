@@ -52,8 +52,8 @@ void *thread_work(void *ptr) {
     }
     // end timer
     if (sum > 0) {
-        utils::end_timer(timer_full, std::cout);
         utils::end_timer(timer_work, std::cout);
+        utils::end_timer(timer_full, std::cout);
     }
     // cond_broadcast w/ cond variable
     ++ g_flow_step;

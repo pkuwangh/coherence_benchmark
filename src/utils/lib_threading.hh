@@ -1,6 +1,7 @@
 #ifndef __LIB_THREADING_HH__
 #define __LIB_THREADING_HH__
 
+#include <cassert>
 #include <iostream>
 #include <vector>
 #include <pthread.h>
@@ -58,6 +59,13 @@ class ThreadHelper {
     void create(void *(*start_routine)(void *)) {
         for (uint32_t i = 0; i < num_threads_; ++i) {
             pthread_create(&threads_[i], &attrs_[i], start_routine, (void*)(&packets_[i]));
+        }
+    }
+    void create(void *(*start_routine)(void *), uint32_t start, uint32_t num) {
+        for (uint32_t i = 0; i < num; ++i) {
+            const uint32_t idx = (start + i);
+            assert(idx < num_threads_);
+            pthread_create(&threads_[idx], &attrs_[idx], start_routine, (void*)(&packets_[idx]));
         }
     }
     void join() {
