@@ -39,10 +39,9 @@ void end_timer(const std::string& timer_key, std::ostream& os) {
         const Timer::Handle& timer = g_timer_map.at(timer_key);
         timer->endTimer(os);
         // remove it
+        pthread_mutex_lock(&g_timer_map_mutex);
         g_timer_map.erase(timer_key);
-        if (g_timer_map.size() == 0) {
-            pthread_mutex_destroy(&g_timer_map_mutex);
-        }
+        pthread_mutex_unlock(&g_timer_map_mutex);
     } catch (const std::out_of_range& oor) {
         os << "Out of range error: " << oor.what() << std::endl;
     } catch (...) {

@@ -4,3 +4,4 @@
 Import('*')
 
 # add coherence test targets
+Benchmark("multiple_rdwr", "multiple_rdwr.cc")
