@@ -12,7 +12,7 @@ class MemRegion {
     using Handle = std::shared_ptr<MemRegion>;
 
     MemRegion(uint32_t size, uint32_t page_size, uint32_t line_size);
-    ~MemRegion() = default;
+    virtual ~MemRegion() = default;
 
     // initialize to different patterns
     void stride_init();

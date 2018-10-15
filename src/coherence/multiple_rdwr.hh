@@ -8,10 +8,35 @@
 #include <sstream>
 #include <ostream>
 #include <vector>
+#include <pthread.h>
 
 #include "utils/lib_mem_region.hh"
 #include "utils/lib_timing.hh"
 #include "utils/lib_threading.hh"
+
+class MemRegionExt : public utils::MemRegion {
+  public:
+    using Handle = std::shared_ptr<MemRegionExt>;
+
+    MemRegionExt(uint32_t region_size, uint32_t page_size, uint32_t line_size, uint32_t num_partitions) :
+        utils::MemRegion(region_size, page_size, line_size)
+    {
+        flow_mutex.reset(new pthread_mutex_t);
+        flow_cond.reset(new pthread_cond_t);
+        flow_step.reset(new uint32_t);
+        pthread_mutex_init(flow_mutex.get(), NULL);
+        pthread_cond_init(flow_cond.get(), NULL);
+        *flow_step = 0;
+    }
+    ~MemRegionExt() {
+        pthread_mutex_destroy(flow_mutex.get());
+        pthread_cond_destroy(flow_cond.get());
+    }
+
+    std::unique_ptr<pthread_mutex_t> flow_mutex;
+    std::unique_ptr<pthread_cond_t>  flow_cond;
+    std::unique_ptr<uint32_t>        flow_step;
+};
 
 class MemSetup {
   public:
@@ -31,8 +56,8 @@ class MemSetup {
         num_iterations_ (num_iterations)
     {
         for (uint32_t i = 0; i < mem_regions_.size(); ++i) {
-            mem_regions_[i] = std::make_shared<utils::MemRegion>(
-                    1024*partition_size, 1024*page_size, stride);
+            mem_regions_[i] = std::make_shared<MemRegionExt>(
+                    1024*partition_size, 1024*page_size, stride, num_partitions_);
             if (pattern == "stride") {
                 mem_regions_[i]->stride_init();
             } else if (pattern == "pageRand") {
@@ -51,7 +76,7 @@ class MemSetup {
     const uint32_t region_size_;
     const uint32_t partition_size_;
     const uint32_t num_partitions_;
-    std::vector<utils::MemRegion::Handle> mem_regions_;
+    std::vector<MemRegionExt::Handle> mem_regions_;
     const uint32_t num_iterations_;
 
     friend class ThreadPacket;
@@ -73,6 +98,13 @@ class ThreadPacket: public utils::BaseThreadPacket {
     uint32_t getNumLines() const { return mem_setup_->mem_regions_[0]->numLines(); }
     char** getStartPoint(const uint32_t& part_idx) const {
         return mem_setup_->mem_regions_[part_idx]->getStartPoint();
+    }
+
+    pthread_mutex_t* getFlowMutex (const uint32_t& part_idx) { return mem_setup_->mem_regions_[part_idx]->flow_mutex.get(); }
+    pthread_cond_t*  getFlowCond  (const uint32_t& part_idx) { return mem_setup_->mem_regions_[part_idx]->flow_cond.get(); }
+    const uint32_t&  getFlowStep  (const uint32_t& part_idx) const { return *(mem_setup_->mem_regions_[part_idx]->flow_step); }
+    void incrFlowStep(const uint32_t& part_idx) {
+        *(mem_setup_->mem_regions_[part_idx]->flow_step) = (*(mem_setup_->mem_regions_[part_idx]->flow_step) + 1) % getNumThreads();
     }
 
     void setBadStatus(uint32_t v) { bad_status_ = v; }

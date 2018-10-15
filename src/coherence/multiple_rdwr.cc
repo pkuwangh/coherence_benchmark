@@ -7,11 +7,6 @@
 #include "utils/lib_timing.hh"
 #include "coherence/multiple_rdwr.hh"
 
-// global dfined lock
-std::vector<pthread_mutex_t>  g_flow_mutex;
-std::vector<pthread_cond_t>   g_flow_cond;
-std::vector<uint32_t>         g_flow_step;
-
 bool warm_up(void *ptr)
 {
     const ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
@@ -39,11 +34,7 @@ void *thread_work(void *ptr)
     ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
     // warm-up
     if (pkt->getThreadId() == 0) {
-        const bool mem_setup_good = warm_up(ptr);
-        if (!mem_setup_good) {
-            std::cerr << "memory-region setup exception" << std::endl;
-            exit(1);
-        }
+        warm_up(ptr);
     }
     // pointer chasing
     register char** p = NULL;
@@ -52,9 +43,9 @@ void *thread_work(void *ptr)
     for (uint32_t i = 0; i < pkt->getNumIterations(); ++i) {
         for (uint32_t part_idx = 0; part_idx < pkt->getNumPartitions(); ++part_idx) {
             // locking
-            pthread_mutex_lock(&g_flow_mutex[part_idx]);
-            while (g_flow_step[part_idx] != pkt->getThreadId()) {
-                pthread_cond_wait(&g_flow_cond[part_idx], &g_flow_mutex[part_idx]);
+            pthread_mutex_lock(pkt->getFlowMutex(part_idx));
+            while (pkt->getFlowStep(part_idx) != pkt->getThreadId()) {
+                pthread_cond_wait(pkt->getFlowCond(part_idx), pkt->getFlowMutex(part_idx));
             }
             // per-thread work timer
             pkt->startTimer();
@@ -65,12 +56,12 @@ void *thread_work(void *ptr)
                 *(p + 4) += 1;
                 p = (char**)(*p);
             }
-            // stop timer
             pkt->endTimer();
+            // stop timer
             // unlocking
-            g_flow_step[part_idx] = (g_flow_step[part_idx] + 1) % pkt->getNumThreads();
-            pthread_cond_broadcast(&g_flow_cond[part_idx]);
-            pthread_mutex_unlock(&g_flow_mutex[part_idx]);
+            pkt->incrFlowStep(part_idx);
+            pthread_cond_broadcast(pkt->getFlowCond(part_idx));
+            pthread_mutex_unlock(pkt->getFlowMutex(part_idx));
             // return something
             bad_status += (p == NULL);
         }
@@ -102,15 +93,6 @@ int main(int argc, char** argv)
     MemSetup::Handle mem_setup = std::make_shared<MemSetup>(
             region_size, page_size, stride, pattern,
             partition_size, num_iterations);
-    // init locks
-    const uint32_t num_partitions = region_size / partition_size;
-    g_flow_mutex.resize(num_partitions);
-    g_flow_cond.resize(num_partitions);
-    g_flow_step.resize(num_partitions, 0);
-    for (uint32_t i = 0; i < num_partitions; ++i) {
-        pthread_mutex_init(&g_flow_mutex[i], NULL);
-        pthread_cond_init(&g_flow_cond[i], NULL);
-    }
     // thread attrs
     const uint32_t num_threads = get_nprocs();
     utils::ThreadHelper<ThreadPacket> threads(num_threads, thread_step);
@@ -129,10 +111,5 @@ int main(int argc, char** argv)
         status += threads.getPacket(i).getBadStatus();
         threads.getPacket(i).dumpTimer(std::cout);
     }
-    // destroy locks
-    for (uint32_t i = 0; i < num_partitions; ++i) {
-        pthread_mutex_destroy(&g_flow_mutex[i]);
-        pthread_cond_destroy(&g_flow_cond[i]);
-    }
-    return 0;
+    return status;
 }
