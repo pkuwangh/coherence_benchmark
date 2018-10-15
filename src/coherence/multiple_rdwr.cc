@@ -35,7 +35,8 @@ bool warm_up(void *ptr)
 // read-modify-write thread
 void *thread_work(void *ptr)
 {
-    const ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
+    uint32_t bad_status = 0;
+    ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
     // warm-up
     if (pkt->getThreadId() == 0) {
         const bool mem_setup_good = warm_up(ptr);
@@ -44,10 +45,10 @@ void *thread_work(void *ptr)
             exit(1);
         }
     }
-
+    // pointer chasing
     register char** p = NULL;
     register uint32_t k = 0;
-
+    // loop iterations, loop partitions
     for (uint32_t i = 0; i < pkt->getNumIterations(); ++i) {
         for (uint32_t part_idx = 0; part_idx < pkt->getNumPartitions(); ++part_idx) {
             // locking
@@ -56,25 +57,25 @@ void *thread_work(void *ptr)
                 pthread_cond_wait(&g_flow_cond[part_idx], &g_flow_mutex[part_idx]);
             }
             // per-thread work timer
-            const std::string timer_key = "T" + std::to_string(pkt->getThreadId()) +
-                " p" + std::to_string(part_idx);
-            utils::start_timer(timer_key);
+            pkt->startTimer();
             // real work
             const uint32_t& num_chases = pkt->getNumLines();
             p = pkt->getStartPoint(part_idx);
             for (k = 0; k < num_chases; ++k) {
+                *(p + 4) += 1;
                 p = (char**)(*p);
             }
             // stop timer
-            if (p != NULL) {
-                utils::end_timer(timer_key, std::cout);
-            }
+            pkt->endTimer();
             // unlocking
             g_flow_step[part_idx] = (g_flow_step[part_idx] + 1) % pkt->getNumThreads();
             pthread_cond_broadcast(&g_flow_cond[part_idx]);
             pthread_mutex_unlock(&g_flow_mutex[part_idx]);
+            // return something
+            bad_status += (p == NULL);
         }
     }
+    pkt->setBadStatus(bad_status);
 }
 
 int main(int argc, char** argv)
@@ -111,16 +112,23 @@ int main(int argc, char** argv)
         pthread_cond_init(&g_flow_cond[i], NULL);
     }
     // thread attrs
-//    const uint32_t num_threads = get_nprocs();
-    const uint32_t num_threads = 4;
+    const uint32_t num_threads = get_nprocs();
     utils::ThreadHelper<ThreadPacket> threads(num_threads, thread_step);
     for (uint32_t i = 0; i < num_threads; ++i) {
         threads.getPacket(i).setMemSetup(mem_setup);
     }
+    utils::start_timer("all");
     // create threads
     threads.create(thread_work, 0, num_threads);
     // wait all threads
     threads.join();
+    utils::end_timer("all", std::cout);
+    // check output & dump timers
+    uint32_t status = 0;
+    for (uint32_t i = 0; i < num_threads; ++i) {
+        status += threads.getPacket(i).getBadStatus();
+        threads.getPacket(i).dumpTimer(std::cout);
+    }
     // destroy locks
     for (uint32_t i = 0; i < num_partitions; ++i) {
         pthread_mutex_destroy(&g_flow_mutex[i]);

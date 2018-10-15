@@ -13,15 +13,18 @@ class Timer {
   public:
     using Handle = std::shared_ptr<Timer>;
 
-    Timer() { }
+    Timer();
     ~Timer() = default;
 
     void startTimer();
-    void endTimer(std::ostream& os);
+    void endTimer();
+
+    const float& getElapsedTime() const { return elapsed_time_; }
 
   private:
     std::chrono::steady_clock::time_point time_point_begin_;
     std::chrono::steady_clock::time_point time_point_end_;
+    float elapsed_time_;
 };
 
 

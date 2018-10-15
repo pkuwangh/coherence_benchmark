@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iostream>
 #include <vector>
+#include <string>
 #include <pthread.h>
 
 namespace utils {
@@ -16,13 +17,16 @@ class BaseThreadPacket {
     void setThreadId(uint32_t tid, uint32_t num) {
         thread_id_ = tid;
         num_threads_ = num;
+        signature_ = "T" + std::to_string(tid);
     }
     const uint32_t& getThreadId() const { return thread_id_; }
     const uint32_t& getNumThreads() const { return num_threads_; }
+    const std::string& getSignature() const { return signature_; }
 
   private:
     uint32_t thread_id_;
     uint32_t num_threads_;
+    std::string signature_;
 };
 
 template <class Packet>

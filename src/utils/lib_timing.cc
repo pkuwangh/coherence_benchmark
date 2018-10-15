@@ -5,14 +5,18 @@
 
 namespace utils {
 
+Timer::Timer() :
+    elapsed_time_ (0)
+{
+}
+
 void Timer::startTimer() {
     time_point_begin_ = std::chrono::steady_clock::now();
 }
 
-void Timer::endTimer(std::ostream& os) {
+void Timer::endTimer() {
     time_point_end_ = std::chrono::steady_clock::now();
-    os << std::chrono::duration_cast<std::chrono::duration<float>>(time_point_end_ - time_point_begin_).count()
-        << '\n';
+    elapsed_time_ += std::chrono::duration_cast<std::chrono::duration<float>>(time_point_end_ - time_point_begin_).count();
 }
 
 
@@ -28,24 +32,25 @@ void start_timer(const std::string& timer_key) {
     }
     pthread_mutex_lock(&g_timer_map_mutex);
     g_timer_map[timer_key] = std::make_shared<Timer>();
-    pthread_mutex_unlock(&g_timer_map_mutex);
     // start timer
     g_timer_map[timer_key]->startTimer();
+    pthread_mutex_unlock(&g_timer_map_mutex);
 }
 
 void end_timer(const std::string& timer_key, std::ostream& os) {
     try {
-        os << "timer <" << timer_key << ">: elapsed time ";
-        const Timer::Handle& timer = g_timer_map.at(timer_key);
-        timer->endTimer(os);
-        // remove it
         pthread_mutex_lock(&g_timer_map_mutex);
+        const Timer::Handle& timer = g_timer_map.at(timer_key);
+        timer->endTimer();
+        std::string out_str = "timer <" + timer_key + ">: elapsed time " + std::to_string(timer->getElapsedTime()) + "\n";
+        // remove it
         g_timer_map.erase(timer_key);
         pthread_mutex_unlock(&g_timer_map_mutex);
+        os << out_str;
     } catch (const std::out_of_range& oor) {
-        os << "Out of range error: " << oor.what() << std::endl;
+        std::cerr << "Out of range error: " << oor.what() << " on " << timer_key << std::endl;
     } catch (...) {
-        os << "Timer error ..." << std::endl;
+        std::cerr << "Timer error ..." << std::endl;
     }
 }
 

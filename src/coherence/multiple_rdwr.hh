@@ -6,9 +6,11 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <ostream>
 #include <vector>
 
 #include "utils/lib_mem_region.hh"
+#include "utils/lib_timing.hh"
 #include "utils/lib_threading.hh"
 
 class MemSetup {
@@ -59,7 +61,8 @@ class ThreadPacket: public utils::BaseThreadPacket {
   public:
     ThreadPacket() :
         BaseThreadPacket(),
-        mem_setup_ (nullptr)
+        mem_setup_ (nullptr),
+        bad_status_ (false)
     { }
     ~ThreadPacket() = default;
 
@@ -72,8 +75,20 @@ class ThreadPacket: public utils::BaseThreadPacket {
         return mem_setup_->mem_regions_[part_idx]->getStartPoint();
     }
 
+    void setBadStatus(uint32_t v) { bad_status_ = v; }
+    uint32_t getBadStatus() const { return bad_status_; }
+
+    void startTimer() { timer_.startTimer(); }
+    void endTimer() { timer_.endTimer(); }
+    void dumpTimer(std::ostream& os) {
+        std::string out_str = "timer <" + getSignature() + "> elapsed time: " + std::to_string(timer_.getElapsedTime()) + "\n";
+        os << out_str;
+    }
+
   private:
     MemSetup::Handle mem_setup_;
+    uint32_t bad_status_;
+    utils::Timer timer_;
 };
 
 #endif
