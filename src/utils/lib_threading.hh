@@ -13,11 +13,16 @@ class BaseThreadPacket {
     BaseThreadPacket() { }
     virtual ~BaseThreadPacket() = default;
 
-    void setThreadId(uint32_t tid) { thread_id_ = tid; }
-    uint32_t getThreadId() const { return thread_id_; }
+    void setThreadId(uint32_t tid, uint32_t num) {
+        thread_id_ = tid;
+        num_threads_ = num;
+    }
+    const uint32_t& getThreadId() const { return thread_id_; }
+    const uint32_t& getNumThreads() const { return num_threads_; }
 
   private:
     uint32_t thread_id_;
+    uint32_t num_threads_;
 };
 
 template <class Packet>
@@ -36,12 +41,23 @@ class ThreadHelper {
         }
         const uint32_t group_size = num_threads / thread_step;
         // prepare thread attrs
+        std::cout << "thread ID: [";
+        for (uint32_t i = 0; i < num_threads; ++i) {
+            std::cout << i;
+            if (num_threads > 100 && i < 100) std::cout << " ";
+            if (i < 10) std::cout << " ";
+            if (i < num_threads-1) std::cout << " ";
+        }
+        std::cout << "]\n core  ID: [";
         for (uint32_t i = 0; i < num_threads; ++i) {
             // get thread-core mapping
             const uint32_t group_id = i / group_size;
             const uint32_t group_offset = i % group_size;
             const uint32_t core_id = group_id + group_offset * thread_step;
-            std::cout << "thread " << i << " -> core" << core_id << std::endl;
+            std::cout << core_id;
+            if (num_threads > 100 && core_id < 100) std::cout << " ";
+            if (core_id < 10) std::cout << " ";
+            if (core_id < num_threads-1) std::cout << " ";
             pthread_attr_init(&attrs_[i]);
             cpu_set_t cpuset;
             CPU_ZERO(&cpuset);
@@ -49,12 +65,14 @@ class ThreadHelper {
             // set thread attribute
             pthread_attr_setaffinity_np(&attrs_[i], sizeof(cpu_set_t), &cpuset);
             // thread packets
-            packets_[i].setThreadId(i);
+            packets_[i].setThreadId(i, num_threads);
         }
+        std::cout << "]" << std::endl;
     }
     ~ThreadHelper() = default;
 
-    Packet& getPacket(const uint32_t& i) { return packets_[i]; }
+    Packet& getPacket(const uint32_t& idx) { return packets_[idx]; }
+    void* getPacketPtr(const uint32_t& idx) { return (void*)(&packets_[idx]); }
 
     void create(void *(*start_routine)(void *)) {
         for (uint32_t i = 0; i < num_threads_; ++i) {

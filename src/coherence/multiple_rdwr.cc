@@ -12,45 +12,68 @@ std::vector<pthread_mutex_t>  g_flow_mutex;
 std::vector<pthread_cond_t>   g_flow_cond;
 std::vector<uint32_t>         g_flow_step;
 
+bool warm_up(void *ptr)
+{
+    const ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
+    register char** p = NULL;
+    register uint32_t k = 0;
+    // start timer
+    utils::start_timer("warmup");
+    // read-in memory regions
+    for (uint32_t part_idx = 0; part_idx < pkt->getNumPartitions(); ++part_idx) {
+        const uint32_t& num_chases = pkt->getNumLines();
+        p = pkt->getStartPoint(part_idx);
+        for (k = 0; k < num_chases; ++k) {
+            p = (char**)(*p);
+        }
+    }
+    // stop timer
+    utils::end_timer("warmup", std::cout);
+    return (p != NULL);
+}
+
 // read-modify-write thread
 void *thread_work(void *ptr)
 {
     const ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
+    // warm-up
+    if (pkt->getThreadId() == 0) {
+        const bool mem_setup_good = warm_up(ptr);
+        if (!mem_setup_good) {
+            std::cerr << "memory-region setup exception" << std::endl;
+            exit(1);
+        }
+    }
 
     register char** p = NULL;
     register uint32_t k = 0;
 
-    for (uint32_t part_idx = 0; part_idx < pkt->getNumPartitions(); ++part_idx) {
-        // locking
-        pthread_mutex_lock(&g_flow_mutex[part_idx]);
-        while (g_flow_step[part_idx] != pkt->getThreadId()) {
-            pthread_cond_wait(&g_flow_cond[part_idx], &g_flow_mutex[part_idx]);
-        }
-        // per-thread work timer
-        const std::string timer_key = "T" + std::to_string(pkt->getThreadId()) +
-            " p" + std::to_string(part_idx);
-        utils::start_timer(timer_key);
-        // real work
-        const uint32_t& num_chases = pkt->getNumLines();
-        p = pkt->getStartPoint(part_idx);
-        for (k = 0; k < num_chases; ++k) {
-            if (k < 4) {
-                std::stringstream ss;
-                ss << "T" << pkt->getThreadId() << " p" << part_idx
-                    << " addr=[" << std::hex << "0x" << reinterpret_cast<uint64_t>(p)
-                    << "]" << std::dec << "\n";
-                std::cout << ss.str();
+    for (uint32_t i = 0; i < pkt->getNumIterations(); ++i) {
+        for (uint32_t part_idx = 0; part_idx < pkt->getNumPartitions(); ++part_idx) {
+            // locking
+            pthread_mutex_lock(&g_flow_mutex[part_idx]);
+            while (g_flow_step[part_idx] != pkt->getThreadId()) {
+                pthread_cond_wait(&g_flow_cond[part_idx], &g_flow_mutex[part_idx]);
             }
-            p = (char**)(*p);
+            // per-thread work timer
+            const std::string timer_key = "T" + std::to_string(pkt->getThreadId()) +
+                " p" + std::to_string(part_idx);
+            utils::start_timer(timer_key);
+            // real work
+            const uint32_t& num_chases = pkt->getNumLines();
+            p = pkt->getStartPoint(part_idx);
+            for (k = 0; k < num_chases; ++k) {
+                p = (char**)(*p);
+            }
+            // stop timer
+            if (p != NULL) {
+                utils::end_timer(timer_key, std::cout);
+            }
+            // unlocking
+            g_flow_step[part_idx] = (g_flow_step[part_idx] + 1) % pkt->getNumThreads();
+            pthread_cond_broadcast(&g_flow_cond[part_idx]);
+            pthread_mutex_unlock(&g_flow_mutex[part_idx]);
         }
-        // stop timer
-        if (p != NULL) {
-            utils::end_timer(timer_key, std::cout);
-        }
-        // unlocking
-        ++ g_flow_step[part_idx];
-        pthread_cond_broadcast(&g_flow_cond[part_idx]);
-        pthread_mutex_unlock(&g_flow_mutex[part_idx]);
     }
 }
 
@@ -61,10 +84,10 @@ int main(int argc, char** argv)
         std::cout << "Usage: ./multiple_rdwr.cc"
             << " <region_size> <page_size> <stride> <pattern>"
             << " <partition_size> <num_iterations> <thread mapping step>" << std::endl;
-        std::cout << "region_size/page_size/partition_size in KB" << std::endl;
-        std::cout << "stride (spatial) in B" << std::endl;
-        std::cout << "pattern: stride, pageRand, allRand" << std::endl;
-        std::cout << "thread mapping step: e.g. 2 leads to 0,1,2,3 -> 0,2,1,3" << std::endl;
+        std::cout << "\tregion_size/page_size/partition_size in KB" << std::endl;
+        std::cout << "\tstride (spatial) in B" << std::endl;
+        std::cout << "\tpattern: stride, pageRand, allRand" << std::endl;
+        std::cout << "\tthread mapping step: e.g. 2 leads to 0,1,2,3 -> 0,2,1,3" << std::endl;
         exit(1);
     }
     const uint32_t region_size = atoi(argv[1]);
@@ -88,7 +111,8 @@ int main(int argc, char** argv)
         pthread_cond_init(&g_flow_cond[i], NULL);
     }
     // thread attrs
-    const uint32_t num_threads = get_nprocs();
+//    const uint32_t num_threads = get_nprocs();
+    const uint32_t num_threads = 4;
     utils::ThreadHelper<ThreadPacket> threads(num_threads, thread_step);
     for (uint32_t i = 0; i < num_threads; ++i) {
         threads.getPacket(i).setMemSetup(mem_setup);

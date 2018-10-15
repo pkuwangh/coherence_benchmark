@@ -30,7 +30,7 @@ class MemSetup {
     {
         for (uint32_t i = 0; i < mem_regions_.size(); ++i) {
             mem_regions_[i] = std::make_shared<utils::MemRegion>(
-                    1024*region_size, 1024*page_size, stride);
+                    1024*partition_size, 1024*page_size, stride);
             if (pattern == "stride") {
                 mem_regions_[i]->stride_init();
             } else if (pattern == "pageRand") {
