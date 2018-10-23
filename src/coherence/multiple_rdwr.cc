@@ -101,7 +101,8 @@ int main(int argc, char** argv)
     }
     utils::start_timer("all");
     // create threads
-    threads.create(thread_work, 0, num_threads);
+    threads.setRoutine(thread_work, [](const uint32_t& idx) { return true; });
+    threads.create();
     // wait all threads
     threads.join();
     utils::end_timer("all", std::cout);

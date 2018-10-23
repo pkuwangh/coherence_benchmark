@@ -37,7 +37,8 @@ class ThreadHelper {
         thread_step_ (thread_step),
         attrs_ (num_threads),
         threads_ (num_threads),
-        packets_ (num_threads)
+        packets_ (num_threads),
+        start_routines_ (num_threads, nullptr)
     {
         if (num_threads % thread_step > 0) {
             std::cerr << "expect num_threads=" << num_threads << " to be a multiple of thread_step=" << thread_step << std::endl;
@@ -78,16 +79,18 @@ class ThreadHelper {
     Packet& getPacket(const uint32_t& idx) { return packets_[idx]; }
     void* getPacketPtr(const uint32_t& idx) { return (void*)(&packets_[idx]); }
 
-    void create(void *(*start_routine)(void *)) {
+    template <class UnaryPredicate>
+    void setRoutine(void *(*start_routine)(void *), UnaryPredicate pred) {
         for (uint32_t i = 0; i < num_threads_; ++i) {
-            pthread_create(&threads_[i], &attrs_[i], start_routine, (void*)(&packets_[i]));
+            if (pred(i)) {
+                start_routines_[i] = start_routine;
+            }
         }
     }
-    void create(void *(*start_routine)(void *), uint32_t start, uint32_t num) {
-        for (uint32_t i = 0; i < num; ++i) {
-            const uint32_t idx = (start + i);
-            assert(idx < num_threads_);
-            pthread_create(&threads_[idx], &attrs_[idx], start_routine, (void*)(&packets_[idx]));
+
+    void create() {
+        for (uint32_t i = 0; i < num_threads_; ++i) {
+            pthread_create(&threads_[i], &attrs_[i], start_routines_[i], (void*)(&packets_[i]));
         }
     }
     void join() {
@@ -103,6 +106,7 @@ class ThreadHelper {
     std::vector<pthread_t> threads_;
     std::vector<pthread_attr_t> attrs_;
     std::vector<Packet> packets_;
+    std::vector<void *(*)(void *)> start_routines_;
 };
 
 }

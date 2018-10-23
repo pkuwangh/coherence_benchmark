@@ -102,8 +102,9 @@ int main(int argc, char **argv)
     const uint32_t num_threads = get_nprocs();
     utils::ThreadHelper<ThreadPacket> threads(num_threads, thread_step);
     // create threads
-    threads.create(writer_thread, 0, 1);
-    threads.create(reader_thread, 1, num_threads-1);
+    threads.setRoutine(writer_thread, [](const uint32_t& idx) { return idx == 0; });
+    threads.setRoutine(reader_thread, [](const uint32_t& idx) { return idx > 0; });
+    threads.create();
     // wait threads
     threads.join();
     // destroy locks
