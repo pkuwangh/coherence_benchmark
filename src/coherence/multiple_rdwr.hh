@@ -123,4 +123,24 @@ class ThreadPacket: public utils::BaseThreadPacket {
     utils::Timer timer_;
 };
 
+bool warm_up(void *ptr, std::string post_fix = "")
+{
+    const ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
+    register char** p = NULL;
+    register uint32_t k = 0;
+    // start timer
+    utils::start_timer("warmup"+post_fix);
+    // read-in memory regions
+    for (uint32_t part_idx = 0; part_idx < pkt->getNumPartitions(); ++part_idx) {
+        const uint32_t& num_chases = pkt->getNumLines();
+        p = pkt->getStartPoint(part_idx);
+        for (k = 0; k < num_chases; ++k) {
+            p = (char**)(*p);
+        }
+    }
+    // stop timer
+    utils::end_timer("warmup"+post_fix, std::cout);
+    return (p != NULL);
+}
+
 #endif

@@ -5,3 +5,4 @@ Import('*')
 
 # add coherence test targets
 Benchmark("multiple_rdwr", "multiple_rdwr.cc")
+Benchmark("smt_rdwr", "smt_rdwr.cc")
