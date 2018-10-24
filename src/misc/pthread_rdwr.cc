@@ -100,7 +100,7 @@ int main(int argc, char **argv)
     pthread_cond_init(&g_flow_cond, NULL);
     // thread attrs
     const uint32_t num_threads = get_nprocs();
-    utils::ThreadHelper<ThreadPacket> threads(num_threads, thread_step);
+    utils::ThreadHelper<ThreadPacket> threads(num_threads, num_threads, thread_step);
     // create threads
     threads.setRoutine(writer_thread, [](const uint32_t& idx) { return idx == 0; });
     threads.setRoutine(reader_thread, [](const uint32_t& idx) { return idx > 0; });

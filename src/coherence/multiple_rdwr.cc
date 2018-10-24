@@ -72,10 +72,11 @@ void *thread_work(void *ptr)
 int main(int argc, char** argv)
 {
     // input parameters
-    if (argc != 8) {
+    if (argc != 9) {
         std::cout << "Usage: ./multiple_rdwr.cc"
             << " <region_size> <page_size> <stride> <pattern>"
-            << " <partition_size> <num_iterations> <thread mapping step>" << std::endl;
+            << " <partition_size> <num_iterations>"
+            << " <num threads> <thread mapping step>" << std::endl;
         std::cout << "\tregion_size/page_size/partition_size in KB" << std::endl;
         std::cout << "\tstride (spatial) in B" << std::endl;
         std::cout << "\tpattern: stride, pageRand, allRand" << std::endl;
@@ -88,14 +89,16 @@ int main(int argc, char** argv)
     std::string pattern = argv[4];
     const uint32_t partition_size = atoi(argv[5]);
     const uint32_t num_iterations = atoi(argv[6]);
-    const uint32_t thread_step = atoi(argv[7]);
+    const uint32_t num_threads_user = atoi(argv[7]);
+    const uint32_t thread_step = atoi(argv[8]);
     // memory region setup
     MemSetup::Handle mem_setup = std::make_shared<MemSetup>(
             region_size, page_size, stride, pattern,
             partition_size, num_iterations);
     // thread attrs
-    const uint32_t num_threads = get_nprocs();
-    utils::ThreadHelper<ThreadPacket> threads(num_threads, thread_step);
+    const uint32_t num_cores = get_nprocs();
+    const uint32_t num_threads = (num_threads_user > 0) ? num_threads_user : num_cores;
+    utils::ThreadHelper<ThreadPacket> threads(num_threads, num_cores, thread_step);
     for (uint32_t i = 0; i < num_threads; ++i) {
         threads.getPacket(i).setMemSetup(mem_setup);
     }

@@ -32,7 +32,7 @@ class BaseThreadPacket {
 template <class Packet>
 class ThreadHelper {
   public:
-    ThreadHelper(uint32_t num_threads, uint32_t thread_step) :
+    ThreadHelper(uint32_t num_threads, uint32_t num_cores, uint32_t thread_step) :
         num_threads_ (num_threads),
         thread_step_ (thread_step),
         attrs_ (num_threads),
@@ -40,11 +40,11 @@ class ThreadHelper {
         packets_ (num_threads),
         start_routines_ (num_threads, nullptr)
     {
-        if (num_threads % thread_step > 0) {
-            std::cerr << "expect num_threads=" << num_threads << " to be a multiple of thread_step=" << thread_step << std::endl;
+        if (num_cores % thread_step > 0) {
+            std::cerr << "expect num_cores=" << num_threads << " to be a multiple of thread_step=" << thread_step << std::endl;
             exit(1);
         }
-        const uint32_t group_size = num_threads / thread_step;
+        const uint32_t group_size = num_cores / thread_step;
         // prepare thread attrs
         std::cout << "thread ID: [";
         for (uint32_t i = 0; i < num_threads; ++i) {
@@ -62,7 +62,7 @@ class ThreadHelper {
             std::cout << core_id;
             if (num_threads > 100 && core_id < 100) std::cout << " ";
             if (core_id < 10) std::cout << " ";
-            if (core_id < num_threads-1) std::cout << " ";
+            if (i < num_threads-1) std::cout << " ";
             pthread_attr_init(&attrs_[i]);
             cpu_set_t cpuset;
             CPU_ZERO(&cpuset);
