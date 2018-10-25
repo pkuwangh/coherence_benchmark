@@ -113,14 +113,21 @@ class ThreadPacket: public utils::BaseThreadPacket {
     void startTimer() { timer_.startTimer(); }
     void endTimer() { timer_.endTimer(); }
     void dumpTimer(std::ostream& os) {
-        std::string out_str = "timer <" + getSignature() + "> elapsed time: " + std::to_string(timer_.getElapsedTime()) + "\n";
+        std::string out_str = "timer <" + getSignature() + "> elapsed:" +
+            " total(s)=" + std::to_string(timer_.getElapsedTime()) +
+            " per-ref(ns)=" + std::to_string(timer_.getElapsedTime()*1e9/getNumLines()/getNumIterations()) + "\n";
         os << out_str;
     }
+
+    // pattern
+    void setReadOnly(bool v) { read_only_ = v; }
+    const bool& isReadOnly() const { return read_only_; }
 
   private:
     MemSetup::Handle mem_setup_;
     uint32_t bad_status_;
     utils::Timer timer_;
+    bool read_only_ = false;
 };
 
 bool warm_up(void *ptr, std::string post_fix = "")

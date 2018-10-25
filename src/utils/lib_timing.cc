@@ -37,12 +37,17 @@ void start_timer(const std::string& timer_key) {
     pthread_mutex_unlock(&g_timer_map_mutex);
 }
 
-void end_timer(const std::string& timer_key, std::ostream& os) {
+void end_timer(const std::string& timer_key, std::ostream& os, uint32_t num_refs) {
     try {
         pthread_mutex_lock(&g_timer_map_mutex);
         const Timer::Handle& timer = g_timer_map.at(timer_key);
         timer->endTimer();
-        std::string out_str = "timer <" + timer_key + ">: elapsed time " + std::to_string(timer->getElapsedTime()) + "\n";
+        std::string out_str = "timer <" + timer_key + "> elapsed:" +
+            " total(s)=" + std::to_string(timer->getElapsedTime());
+        if (num_refs > 0) {
+            out_str += " per-ref(ns)=" + std::to_string(timer->getElapsedTime()/num_refs);
+        }
+        out_str += "\n";
         // remove it
         g_timer_map.erase(timer_key);
         pthread_mutex_unlock(&g_timer_map_mutex);

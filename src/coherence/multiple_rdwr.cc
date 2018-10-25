@@ -32,9 +32,15 @@ void *thread_rmw(void *ptr)
             // real work
             const uint32_t& num_chases = pkt->getNumLines();
             p = pkt->getStartPoint(part_idx);
-            for (k = 0; k < num_chases; ++k) {
-                *(p + 4) += 1;
-                p = (char**)(*p);
+            if (pkt->isReadOnly()) {
+                for (k = 0; k < num_chases; ++k) {
+                    p = (char**)(*p);
+                }
+            } else {
+                for (k = 0; k < num_chases; ++k) {
+                    *(p + 4) += 1;
+                    p = (char**)(*p);
+                }
             }
             // stop timer
             pkt->endTimer();
@@ -81,6 +87,9 @@ int main(int argc, char** argv)
     utils::ThreadHelper<ThreadPacket> threads(num_threads, num_cores, thread_step);
     for (uint32_t i = 0; i < num_threads; ++i) {
         threads.getPacket(i).setMemSetup(mem_setup);
+        if (i % 2 == 1) {
+            threads.getPacket(i).setReadOnly(true);
+        }
     }
     utils::start_timer("all");
     // create threads

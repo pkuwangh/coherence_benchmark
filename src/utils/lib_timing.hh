@@ -29,7 +29,7 @@ class Timer {
 
 
 void start_timer(const std::string& timer_key);
-void end_timer(const std::string& timer_key, std::ostream& os);
+void end_timer(const std::string& timer_key, std::ostream& os, uint32_t num_refs = 0);
 
 }
 
