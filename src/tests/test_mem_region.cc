@@ -16,16 +16,19 @@ int main() {
             mem_region->page_random_init();
         } else if (pattern == "allRand") {
             mem_region->all_random_init();
+        } else if (pattern == "allRandOffset") {
+            mem_region->all_random_offset_init();
         } else {
             assert(0);
         }
         mem_region->dump();
     };
 
-    test({8192, 4096, 512}, "stride");
-    test({16384, 4096, 512}, "pageRand");
-    test({16384, 4096, 512}, "allRand");
+//    test({8192, 4096, 512}, "stride");
+//    test({16384, 4096, 512}, "pageRand");
+//    test({16384, 4096, 512}, "allRand");
 
-//    test({131072, 131072, 64}, "pageRand");
+    test({131072, 4096, 4096}, "allRandOffset");
+
     return 0;
 }

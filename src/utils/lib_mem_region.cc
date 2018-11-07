@@ -41,6 +41,21 @@ void MemRegion::randomizeSequence_(std::vector<uint64_t>& sequence, uint64_t siz
         sequence[r % (i+1)] = sequence[i];
         sequence[i] = tmp;
     }
+    // start should still be start
+    for (uint32_t i = 1; i < size; ++i) {
+        if (sequence[i] == 0) {
+            sequence[i] = sequence[0];
+            sequence[0] = 0;
+            break;
+        }
+    }
+    // half should still be half
+    for (uint32_t i = 1; i < size; ++i) {
+        if (sequence[i] == size*unit/2) {
+            sequence[i] = sequence[size/2];
+            sequence[size/2] = size*unit/2;
+        }
+    }
 }
 
 // create a circular list of pointers with sequential stride
@@ -86,6 +101,22 @@ void MemRegion::all_random_init()
         *(char**)(base_ + lines_.at(i)) = base_ + lines_.at(i+1);
     }
     *(char**)(base_ + lines_.at(num_lines - 1)) = base_ + lines_.at(0);
+}
+
+// create a circular list of pointers with all-random, and with an offset within line
+void MemRegion::all_random_offset_init()
+{
+    const uint64_t num_lines = numLines();
+    std::vector<uint64_t> lines_(num_lines, 0);
+    randomizeSequence_(lines_, num_lines, line_size_);
+    // run through the lines
+    for (uint64_t i = 0; i < num_lines - 1; ++i) {
+        const uint64_t src_offset = (i * 64) % line_size_;
+        const uint64_t dst_offset = ((i+1) * 64) % line_size_;
+        *(char**)(base_ + lines_.at(i) + src_offset) = base_ + lines_.at(i+1) + dst_offset;
+    }
+    const uint64_t src_offset = ((num_lines - 1) * 64) % line_size_;
+    *(char**)(base_ + lines_.at(num_lines - 1) + src_offset) = base_ + lines_.at(0);
 }
 
 void MemRegion::dump()

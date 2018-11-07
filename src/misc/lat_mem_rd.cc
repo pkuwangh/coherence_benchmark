@@ -34,6 +34,8 @@ int main(int argc, char **argv)
         mem_region->page_random_init();
     } else if (pattern == "allRand") {
         mem_region->all_random_init();
+    } else if (pattern == "allRandOffset") {
+        mem_region->all_random_offset_init();
     } else {
         print_usage();
         return 1;
@@ -57,8 +59,8 @@ int main(int argc, char **argv)
 }
 
 //#define LOOP1     p1 = (char **)*p1, p2 = (char **)*p2, p3 = (char **)*p3, p4 = (char **)*p4;
-//#define LOOP1     p1 = (char **)*p1, p2 = (char **)*p2;
-#define LOOP1     p1 = (char **)*p1;
+#define LOOP1     p1 = (char **)*p1, p2 = (char **)*p2;
+//#define LOOP1     p1 = (char **)*p1;
 #define LOOP4     LOOP1 LOOP1 LOOP1 LOOP1
 #define LOOP16    LOOP4 LOOP4 LOOP4 LOOP4
 #define LOOP64    LOOP16 LOOP16 LOOP16 LOOP16
@@ -68,8 +70,8 @@ bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_c
 {
     register char **start = mem_region->getStartPoint();
     register char **p1 = start;
-    //register char **half = mem_region->getHalfPoint();
-    //register char **p2 = half;
+    register char **half = mem_region->getHalfPoint();
+    register char **p2 = half;
     //register char **q1 = mem_region->getFirstQuarterPoint();
     //register char **q3 = mem_region->getThirdQuarterPoint();
     //register char **p3 = q1;
@@ -79,7 +81,7 @@ bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_c
     //num_iter /= 2;
     while (num_iter > 0) {
         p1 = start;
-        //p2 = half;
+        p2 = half;
         //p3 = q1;
         //p4 = q3;
         -- num_iter;
@@ -87,5 +89,6 @@ bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_c
             LOOP256;
         }
     }
-    return (p1 == NULL);
+    //return (p1 == NULL);
+    return (p1 == NULL && p2 == NULL);
 }
