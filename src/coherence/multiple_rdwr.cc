@@ -12,10 +12,6 @@ void *thread_rmw(void *ptr)
 {
     uint32_t bad_status = 0;
     ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
-    // warm-up
-    if (pkt->getThreadId() == 0) {
-        warm_up(ptr);
-    }
     // pointer chasing
     register char** p = NULL;
     register uint32_t k = 0;
@@ -28,7 +24,9 @@ void *thread_rmw(void *ptr)
                 pthread_cond_wait(pkt->getFlowCond(part_idx), pkt->getFlowMutex(part_idx));
             }
             // per-thread work timer
-            pkt->startTimer();
+            if (i > 0) {
+                pkt->startTimer();
+            }
             // real work
             const uint32_t& num_chases = pkt->getNumLines();
             p = pkt->getStartPoint(part_idx);
@@ -43,7 +41,9 @@ void *thread_rmw(void *ptr)
                 }
             }
             // stop timer
-            pkt->endTimer();
+            if (i > 0) {
+                pkt->endTimer();
+            }
             // unlocking
             pkt->incrFlowStep(part_idx);
             pthread_cond_broadcast(pkt->getFlowCond(part_idx));
@@ -58,15 +58,16 @@ void *thread_rmw(void *ptr)
 int main(int argc, char** argv)
 {
     // input parameters
-    if (argc != 9) {
+    if (argc < 9) {
         std::cout << "Usage: ./multiple_rdwr"
             << " <region_size> <page_size> <stride> <pattern>"
             << " <partition_size> <num_iterations>"
-            << " <num threads> <thread mapping step>" << std::endl;
+            << " <num threads> <thread mapping step> <core-id start>" << std::endl;
         std::cout << "\tregion_size/page_size/partition_size in KB" << std::endl;
         std::cout << "\tstride (spatial) in B" << std::endl;
         std::cout << "\tpattern: stride, pageRand, allRand" << std::endl;
         std::cout << "\tthread mapping step: e.g. 2 leads to 0,1,2,3 -> 0,2,1,3" << std::endl;
+        std::cout << "\t1st iteration will be warm-up" << std::endl;
         exit(1);
     }
     const uint32_t region_size = atoi(argv[1]);
@@ -77,6 +78,8 @@ int main(int argc, char** argv)
     const uint32_t num_iterations = atoi(argv[6]);
     const uint32_t num_threads_user = atoi(argv[7]);
     const uint32_t thread_step = atoi(argv[8]);
+    uint32_t core_id_start = 0;
+    if (argc >= 10) core_id_start = atoi(argv[9]);
     // memory region setup
     MemSetup::Handle mem_setup = std::make_shared<MemSetup>(
             region_size, page_size, stride, pattern,
@@ -84,7 +87,7 @@ int main(int argc, char** argv)
     // thread attrs
     const uint32_t num_cores = get_nprocs();
     const uint32_t num_threads = (num_threads_user > 0) ? num_threads_user : num_cores;
-    utils::ThreadHelper<ThreadPacket> threads(num_threads, num_cores, thread_step);
+    utils::ThreadHelper<ThreadPacket> threads(num_threads, num_cores, thread_step, core_id_start);
     for (uint32_t i = 0; i < num_threads; ++i) {
         threads.getPacket(i).setMemSetup(mem_setup);
         if (i % 2 == 1) {

@@ -14,10 +14,11 @@ class BaseThreadPacket {
     BaseThreadPacket() { }
     virtual ~BaseThreadPacket() = default;
 
-    void setThreadId(uint32_t tid, uint32_t num) {
+    void setThreadId(uint32_t tid, uint32_t core_id, uint32_t num) {
         thread_id_ = tid;
+        core_id_ = core_id;
         num_threads_ = num;
-        signature_ = "T" + std::to_string(tid);
+        signature_ = "T" + std::to_string(tid) + "/C" + std::to_string(core_id);
     }
     const uint32_t& getThreadId() const { return thread_id_; }
     const uint32_t& getNumThreads() const { return num_threads_; }
@@ -25,6 +26,7 @@ class BaseThreadPacket {
 
   private:
     uint32_t thread_id_;
+    uint32_t core_id_;
     uint32_t num_threads_;
     std::string signature_;
 };
@@ -32,7 +34,7 @@ class BaseThreadPacket {
 template <class Packet>
 class ThreadHelper {
   public:
-    ThreadHelper(uint32_t num_threads, uint32_t num_cores, uint32_t thread_step) :
+    ThreadHelper(uint32_t num_threads, uint32_t num_cores, uint32_t thread_step, uint32_t core_id_start=0) :
         num_threads_ (num_threads),
         thread_step_ (thread_step),
         attrs_ (num_threads),
@@ -58,7 +60,7 @@ class ThreadHelper {
             // get thread-core mapping
             const uint32_t group_id = i / group_size;
             const uint32_t group_offset = i % group_size;
-            const uint32_t core_id = group_id + group_offset * thread_step;
+            const uint32_t core_id = (core_id_start + group_id + group_offset * thread_step) % num_cores;
             std::cout << core_id;
             if (num_threads > 100 && core_id < 100) std::cout << " ";
             if (core_id < 10) std::cout << " ";
@@ -70,7 +72,7 @@ class ThreadHelper {
             // set thread attribute
             pthread_attr_setaffinity_np(&attrs_[i], sizeof(cpu_set_t), &cpuset);
             // thread packets
-            packets_[i].setThreadId(i, num_threads);
+            packets_[i].setThreadId(i, core_id, num_threads);
         }
         std::cout << "]" << std::endl;
     }

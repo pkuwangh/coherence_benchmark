@@ -115,7 +115,7 @@ class ThreadPacket: public utils::BaseThreadPacket {
     void dumpTimer(std::ostream& os) {
         std::string out_str = "timer <" + getSignature() + "> elapsed:" +
             " total(s)=" + std::to_string(timer_.getElapsedTime()) +
-            " per-ref(ns)=" + std::to_string(timer_.getElapsedTime()*1e9/getNumLines()/getNumIterations()) + "\n";
+            " per-ref(ns)=" + std::to_string(timer_.getElapsedTime()*1e9/getNumLines()/(getNumIterations()-1)) + "\n";
         os << out_str;
     }
 
