@@ -11,14 +11,13 @@ class MemRegion {
   public:
     using Handle = std::shared_ptr<MemRegion>;
 
-    MemRegion(uint64_t size, uint64_t page_size, uint64_t line_size);
+    MemRegion(uint64_t size, uint64_t page_size=4096, uint64_t line_size=64);
     virtual ~MemRegion() = default;
 
     // initialize to different patterns
     void stride_init();
     void page_random_init();
     void all_random_init();
-    void all_random_offset_init();
     // helper
     void dump();
     uint64_t numLines() const { return num_pages_ * num_lines_in_page_; }

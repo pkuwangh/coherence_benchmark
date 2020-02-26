@@ -1,4 +1,5 @@
 #include <cassert>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 
@@ -23,6 +24,8 @@ MemRegion::MemRegion(
     if ((uint64_t)base_ % (uint64_t)page_size_) {
         base_ += page_size_ - (uint64_t)base_ % page_size_;
     }
+    // init to 0
+    memset(base_, 0, size_);
     // use a fixed seed
     srand(0);
 }
@@ -101,22 +104,6 @@ void MemRegion::all_random_init()
         *(char**)(base_ + lines_.at(i)) = base_ + lines_.at(i+1);
     }
     *(char**)(base_ + lines_.at(num_lines - 1)) = base_ + lines_.at(0);
-}
-
-// create a circular list of pointers with all-random, and with an offset within line
-void MemRegion::all_random_offset_init()
-{
-    const uint64_t num_lines = numLines();
-    std::vector<uint64_t> lines_(num_lines, 0);
-    randomizeSequence_(lines_, num_lines, line_size_);
-    // run through the lines
-    for (uint64_t i = 0; i < num_lines - 1; ++i) {
-        const uint64_t src_offset = (i * 64) % line_size_;
-        const uint64_t dst_offset = ((i+1) * 64) % line_size_;
-        *(char**)(base_ + lines_.at(i) + src_offset) = base_ + lines_.at(i+1) + dst_offset;
-    }
-    const uint64_t src_offset = ((num_lines - 1) * 64) % line_size_;
-    *(char**)(base_ + lines_.at(num_lines - 1) + src_offset) = base_ + lines_.at(0);
 }
 
 void MemRegion::dump()

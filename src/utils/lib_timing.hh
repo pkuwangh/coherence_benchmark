@@ -4,7 +4,6 @@
 #include <chrono>
 #include <memory>
 #include <ostream>
-#include <unordered_map>
 #include <string>
 
 namespace utils {
@@ -29,7 +28,9 @@ class Timer {
 
 
 void start_timer(const std::string& timer_key);
-void end_timer(const std::string& timer_key, std::ostream& os, uint32_t num_refs = 0);
+float end_timer(const std::string& timer_key, std::ostream& os);
+void end_timer(const std::string& timer_key, std::ostream& os, uint64_t num_refs, float core_freq_ghz);
+void end_timer(const std::string& timer_key, std::ostream& os, uint64_t size, uint64_t num_iters, float core_freq_ghz);
 
 }
 
