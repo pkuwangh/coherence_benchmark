@@ -28,6 +28,7 @@ int main(int argc, char **argv)
     const std::string pattern = argv[4];
     const uint64_t iteration = atoi(argv[5]);
     const float core_freq_ghz = argc > 6 ? atof(argv[6]) : 1.6;
+    std::string tag = "lat_mem_rd_" + pattern;
     // setup memory region
     utils::MemRegion::Handle mem_region(new utils::MemRegion(size, page, stride));
     if (pattern == "stride") {
@@ -53,9 +54,9 @@ int main(int argc, char **argv)
     // warm-up one iteration
     error |= benchmark_loads(mem_region, unrolled_loop_count, 1);
     // timer
-    utils::start_timer("lat_mem_rd");
+    utils::start_timer(tag);
     error |= benchmark_loads(mem_region, unrolled_loop_count, iteration);
-    utils::end_timer("lat_mem_rd", std::cout, num_chases * iteration, core_freq_ghz);
+    utils::end_timer(tag, std::cout, num_chases * iteration, core_freq_ghz);
     return error;
 }
 

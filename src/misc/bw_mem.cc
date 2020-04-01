@@ -48,6 +48,7 @@ int main(int argc, char **argv)
         print_usage();
         return 1;
     }
+    std::string tag = "bw_mem_" + action;
     // setup memory region
     uint64_t region_size = size;
     if (action == "pcp" or action == "fcp") {
@@ -68,9 +69,9 @@ int main(int argc, char **argv)
     // warm-up one iteration
     sum |= func(mem_region, unrolled_loop_count, 1);
     // timer
-    utils::start_timer("bw_mem");
+    utils::start_timer(tag);
     sum |= func(mem_region, unrolled_loop_count, iteration);
-    utils::end_timer("bw_mem", std::cout, size, iteration, core_freq_ghz);
+    utils::end_timer(tag, std::cout, size, iteration, core_freq_ghz);
     return sum;
 }
 
