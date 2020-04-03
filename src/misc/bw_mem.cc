@@ -8,7 +8,7 @@
 #include "utils/lib_timing.hh"
 
 void print_usage() {
-    std::cout << "[./bw_mem] [size in KB] [action] [iteration] <core freq in GHz>" << std::endl;
+    std::cout << "[./bw_mem] [size in KB] [action] [warmup iteration] [main iteration] <core freq in GHz>" << std::endl;
     std::cout << "\tavailable action: prd, pwr, prmw, pcp, frd, fwr, frmw, fcp" << std::endl;
     std::cout << "Example: ./bw_mem 2048 prd 100 2.3" << std::endl;
 }
@@ -25,15 +25,16 @@ int benchmark_pcp(const utils::MemRegion::Handle& mem_region, uint64_t loop_coun
 int main(int argc, char **argv)
 {
     utils::start_timer("startup");
-    if (argc < 4) {
+    if (argc < 5) {
         print_usage();
         return 1;
     }
     // get command line arguments
     uint64_t size = 1024 * static_cast<uint64_t>(atoi(argv[1]));
     const std::string action = argv[2];
-    const uint64_t iteration = atoi(argv[3]);
-    const float core_freq_ghz = argc > 4 ? atof(argv[4]) : 1.6;
+    const uint64_t warmup_iteration = atoi(argv[3]);
+    const uint64_t main_iteration = atoi(argv[4]);
+    const float core_freq_ghz = argc > 5 ? atof(argv[5]) : 1.6;
     // action
     std::function<int(const utils::MemRegion::Handle&, uint64_t, uint64_t)> func;
     if (action == "prd") func = benchmark_prd;
@@ -63,15 +64,15 @@ int main(int argc, char **argv)
     const uint64_t unrolled_loop_count = size / loop_size;
     // run
     std::cout << "Memory region setup done; BW test begins ..." << std::endl;
-    std::cout << "Total iterations: " << iteration << ", data size (KB) per iter: " << size << std::endl;
+    std::cout << "Total iterations: " << main_iteration << ", data size (KB) per iter: " << size << std::endl;
     utils::end_timer("startup", std::cout);
     int sum = 0;
-    // warm-up one iteration
-    sum |= func(mem_region, unrolled_loop_count, 1);
+    // warm-up some iterations
+    sum |= func(mem_region, unrolled_loop_count, warmup_iteration);
     // timer
     utils::start_timer(tag);
-    sum |= func(mem_region, unrolled_loop_count, iteration);
-    utils::end_timer(tag, std::cout, size, iteration, core_freq_ghz);
+    sum |= func(mem_region, unrolled_loop_count, main_iteration);
+    utils::end_timer(tag, std::cout, size, main_iteration, core_freq_ghz);
     return sum;
 }
 

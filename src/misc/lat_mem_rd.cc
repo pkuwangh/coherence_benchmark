@@ -7,7 +7,8 @@
 #include "utils/lib_timing.hh"
 
 void print_usage() {
-    std::cout << "[./lat_mem_rd] [size in KB] [page in KB] [stride in B] [pattern] [iteration] <core freq in GHz>" << std::endl;
+    std::cout << "[./lat_mem_rd] [size in KB] [page in KB] [stride in B] [pattern] [warmup iteration] [main iteration] <core freq in GHz>"
+              << std::endl;
     std::cout << "\tavailable patterns: stride, pageRand, allRand" << std::endl;
     std::cout << "Example: ./lat_mem_rd 2048 4 64 pageRand 100 2.3" << std::endl;
 }
@@ -17,7 +18,7 @@ bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_c
 int main(int argc, char **argv)
 {
     utils::start_timer("startup");
-    if (argc < 6) {
+    if (argc < 7) {
         print_usage();
         return 1;
     }
@@ -26,8 +27,9 @@ int main(int argc, char **argv)
     const uint64_t page = 1024 * static_cast<uint64_t>(atoi(argv[2]));
     const uint64_t stride = static_cast<uint64_t>(atoi(argv[3]));
     const std::string pattern = argv[4];
-    const uint64_t iteration = atoi(argv[5]);
-    const float core_freq_ghz = argc > 6 ? atof(argv[6]) : 1.6;
+    const uint64_t warmup_iteration = atoi(argv[5]);
+    const uint64_t main_iteration = atoi(argv[6]);
+    const float core_freq_ghz = argc > 7 ? atof(argv[7]) : 1.6;
     std::string tag = "lat_mem_rd_" + pattern;
     // setup memory region
     utils::MemRegion::Handle mem_region(new utils::MemRegion(size, page, stride));
@@ -48,15 +50,15 @@ int main(int argc, char **argv)
     const uint64_t unrolled_loop_count = num_chases / loop_unroll;
     // run
     std::cout << "Memory region setup done; Pointer-Chasing begins ..." << std::endl;
-    std::cout << "Total iterations: " << iteration << ", # of pointer chases per iter: " << num_chases << std::endl;
+    std::cout << "Total iterations: " << main_iteration << ", # of pointer chases per iter: " << num_chases << std::endl;
     utils::end_timer("startup", std::cout);
     bool error = false;
-    // warm-up one iteration
-    error |= benchmark_loads(mem_region, unrolled_loop_count, 1);
+    // warm-up some iterations
+    error |= benchmark_loads(mem_region, unrolled_loop_count, warmup_iteration);
     // timer
     utils::start_timer(tag);
-    error |= benchmark_loads(mem_region, unrolled_loop_count, iteration);
-    utils::end_timer(tag, std::cout, num_chases * iteration, core_freq_ghz);
+    error |= benchmark_loads(mem_region, unrolled_loop_count, main_iteration);
+    utils::end_timer(tag, std::cout, num_chases * main_iteration, core_freq_ghz);
     return error;
 }
 
