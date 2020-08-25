@@ -1,2 +1,2 @@
 # regress test SConscript
-print '..Testing'
+print('..Testing')

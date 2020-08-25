@@ -1,5 +1,5 @@
 # main sconscript
-print '..Building src/'
+print('..Building src/')
 
 import os
 
@@ -52,19 +52,19 @@ Export('Benchmark')
 # iterate over lower level sconscript files
 for root,dirs,files in os.walk(os.getcwd()):
     for dirname in dirs:
-        print dirname
+        print(dirname)
         current_path = dirname
         env.SConscript('%s/SConscript' % (dirname))
 
 # add common sources
 common_srcs = []
 for source_file in SourceFile.all:
-    print '..Adding %s' % (source_file.srcs)
+    print('..Adding %s' % (source_file.srcs))
     common_srcs.append(source_file.srcs)
 
 # build targets
 for build_target in BuildTarget.all:
-    print '..Building %s' % (build_target.target)
+    print('..Building %s' % (build_target.target))
     srcs = list(common_srcs)
     srcs.append(build_target.srcs)
     env.Program(target=build_target.target, source=srcs)

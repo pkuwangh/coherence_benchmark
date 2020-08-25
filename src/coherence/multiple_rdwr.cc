@@ -90,9 +90,9 @@ int main(int argc, char** argv)
     utils::ThreadHelper<ThreadPacket> threads(num_threads, num_cores, thread_step, core_id_start);
     for (uint32_t i = 0; i < num_threads; ++i) {
         threads.getPacket(i).setMemSetup(mem_setup);
-        if (i % 2 == 1) {
-            threads.getPacket(i).setReadOnly(true);
-        }
+        //if (i % 2 == 1) {
+        //    threads.getPacket(i).setReadOnly(true);
+        //}
     }
     utils::start_timer("all");
     // create threads
