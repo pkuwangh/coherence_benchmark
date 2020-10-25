@@ -50,6 +50,7 @@ void *writer_thread(void *ptr) {
     pthread_cond_broadcast(&g_flow_cond);
     pthread_mutex_unlock(&g_flow_mutex);
     pthread_rwlock_unlock(&g_flow_rwlock);
+    return NULL;
 }
 
 void *reader_thread(void *ptr) {
@@ -86,6 +87,7 @@ void *reader_thread(void *ptr) {
     }
     // unlock
     pthread_rwlock_unlock(&g_flow_rwlock);
+    return NULL;
 }
 
 int main(int argc, char **argv)

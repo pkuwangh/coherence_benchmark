@@ -59,6 +59,7 @@ void *thread_work(void *ptr) {
     ++ g_flow_step;
     pthread_cond_broadcast(&g_flow_cond);
     pthread_mutex_unlock(&g_flow_mutex);
+    return NULL;
 }
 
 int main(int argc, char **argv)

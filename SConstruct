@@ -21,7 +21,7 @@ x86_env.Append(CXXFLAGS=['-std=c++11', '-m64', '-pthread'])
 build_envs['x86'] = x86_env
 
 # iterate and invoke the lower level sconscript files
-for mode,env in build_envs.items():
+for mode, env in build_envs.items():
     modeDir = 'build/%s' % mode
     env.SConscript('%s/src/SConscript' % modeDir, exports={'env':env})
     env.SConscript('%s/regress/SConscript' % modeDir, exports={'env':env})

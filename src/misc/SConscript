@@ -1,5 +1,5 @@
 # unit-test sconscript
-#print '..Adding misc tests'
+#print('..Adding misc tests')
 
 Import('*')
 

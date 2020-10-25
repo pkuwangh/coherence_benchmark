@@ -1,5 +1,5 @@
 # unit-test sconscript
-#print '..Adding coherence tests'
+#print('..Adding coherence tests')
 
 Import('*')
 

@@ -53,6 +53,7 @@ void *thread_rmw(void *ptr)
         }
     }
     pkt->setBadStatus(bad_status);
+    return NULL;
 }
 
 int main(int argc, char** argv)
