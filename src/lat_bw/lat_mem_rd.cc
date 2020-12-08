@@ -10,7 +10,7 @@ void print_usage() {
     std::cout << "[./lat_mem_rd] [size in KB] [page in KB] [stride in B] [pattern] [warmup iteration] [main iteration] <core freq in GHz>"
               << std::endl;
     std::cout << "\tavailable patterns: stride, pageRand, allRand" << std::endl;
-    std::cout << "Example: ./lat_mem_rd 2048 4 64 pageRand 100 2.3" << std::endl;
+    std::cout << "Example: ./lat_mem_rd 2048 4 64 pageRand 10 100 2.3" << std::endl;
 }
 
 bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_count, uint64_t num_iter);
@@ -32,7 +32,9 @@ int main(int argc, char **argv)
     const float core_freq_ghz = argc > 7 ? atof(argv[7]) : 1.6;
     std::string tag = "lat_mem_rd_" + pattern;
     // setup memory region
-    utils::MemRegion::Handle mem_region(new utils::MemRegion(size, page, stride));
+    const bool use_hugepage = true;
+    utils::MemRegion::Handle mem_region(
+        new utils::MemRegion(size, page, stride, use_hugepage));
     if (pattern == "stride") {
         mem_region->stride_init();
     } else if (pattern == "pageRand") {

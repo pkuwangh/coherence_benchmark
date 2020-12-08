@@ -1,7 +1,9 @@
 #include <cassert>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <iomanip>
+#include <sys/mman.h>
 
 #include "utils/lib_mem_region.hh"
 
@@ -10,17 +12,29 @@ namespace utils {
 MemRegion::MemRegion(
         uint64_t size,
         uint64_t page_size,
-        uint64_t line_size) :
+        uint64_t line_size,
+        bool use_hugepage) :
     size_ (size),
     page_size_ (page_size),
     line_size_ (line_size),
+    use_hugepage_ (use_hugepage),
     num_pages_ (size_ / page_size_),
     num_lines_in_page_ (page_size_ / line_size_)
 {
     // allocate a little extra space for page alignment
-    addr_.reset(new char[size_ + 2 * page_size_]);
+    const uint64_t alloc_size = size_ + 2 * page_size_;
+    if (use_hugepage) {
+        addr_ = ((char*)mmap(
+            0x0, alloc_size,
+            PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB,
+            0, 0
+        ));
+    } else {
+        addr_ = ((char*)malloc(alloc_size));
+    }
     // point base_ to page-aligned addr
-    base_ = addr_.get();
+    base_ = addr_;
     if ((uint64_t)base_ % (uint64_t)page_size_) {
         base_ += page_size_ - (uint64_t)base_ % page_size_;
     }
@@ -28,6 +42,14 @@ MemRegion::MemRegion(
     memset(base_, 0, size_);
     // use a fixed seed
     srand(0);
+}
+
+MemRegion::~MemRegion() {
+    if (use_hugepage_) {
+        munmap(addr_, size_ + 2 * page_size_);
+    } else {
+        free(addr_);
+    }
 }
 
 void MemRegion::randomizeSequence_(std::vector<uint64_t>& sequence, uint64_t size, uint64_t unit)

@@ -1,0 +1,8 @@
+# unit-test sconscript
+print('..Adding latency & bandwidth tests')
+
+Import('*')
+
+# add latency or bandwidth test targets
+Benchmark('lat_mem_rd', 'lat_mem_rd.cc')
+Benchmark('bw_mem', 'bw_mem.cc')

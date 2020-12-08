@@ -55,7 +55,11 @@ int main(int argc, char **argv)
     if (action == "pcp" or action == "fcp") {
         region_size *= 2;
     }
-    utils::MemRegion::Handle mem_region(new utils::MemRegion(region_size));
+    const uint64_t page_size = 4096;
+    const uint64_t line_size = 64;
+    const uint64_t use_hugepage = true;
+    utils::MemRegion::Handle mem_region(
+        new utils::MemRegion(region_size, page_size, line_size, use_hugepage));
     // input check
     const uint64_t num_lines = mem_region->numLines();
     // input check
@@ -161,4 +165,3 @@ int benchmark_pcp(const utils::MemRegion::Handle& mem_region, uint64_t loop_coun
 #undef DOIT
     return 0;
 }
-

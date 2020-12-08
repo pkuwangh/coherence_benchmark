@@ -11,8 +11,12 @@ class MemRegion {
   public:
     using Handle = std::shared_ptr<MemRegion>;
 
-    MemRegion(uint64_t size, uint64_t page_size=4096, uint64_t line_size=64);
-    virtual ~MemRegion() = default;
+    MemRegion(
+      uint64_t size,
+      uint64_t page_size,
+      uint64_t line_size,
+      bool use_hugepage);
+    virtual ~MemRegion();
 
     // initialize to different patterns
     void stride_init();
@@ -34,8 +38,9 @@ class MemRegion {
     uint64_t page_size_;   // probably hard-coded to 4KB
     uint64_t line_size_;   // not necessarily the cacheline size; i.e. preferred spatial stride
 
-    std::unique_ptr<char> addr_ = nullptr;  // raw pointer returned by new
+    char*   addr_ = NULL;  // raw pointer returned by malloc
     char*   base_ = NULL;   // page-aligned pointer
+    const bool use_hugepage_ = false;
 
     uint64_t num_pages_;
     uint64_t num_lines_in_page_;

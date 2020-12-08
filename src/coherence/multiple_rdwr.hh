@@ -18,8 +18,13 @@ class MemRegionExt : public utils::MemRegion {
   public:
     using Handle = std::shared_ptr<MemRegionExt>;
 
-    MemRegionExt(uint32_t region_size, uint32_t page_size, uint32_t line_size, uint32_t num_partitions) :
-        utils::MemRegion(region_size, page_size, line_size)
+    MemRegionExt(
+        uint32_t region_size,
+        uint32_t page_size,
+        uint32_t line_size,
+        bool use_hugepage,
+        uint32_t num_partitions) :
+        utils::MemRegion(region_size, page_size, line_size, use_hugepage)
     {
         flow_mutex.reset(new pthread_mutex_t);
         flow_cond.reset(new pthread_cond_t);
@@ -56,8 +61,10 @@ class MemSetup {
         num_iterations_ (num_iterations)
     {
         for (uint32_t i = 0; i < mem_regions_.size(); ++i) {
+            const bool use_hugepage = true;
             mem_regions_[i] = std::make_shared<MemRegionExt>(
-                    1024*partition_size, 1024*page_size, stride, num_partitions_);
+                1024*partition_size, 1024*page_size, stride, use_hugepage,
+                num_partitions_);
             if (pattern == "stride") {
                 mem_regions_[i]->stride_init();
             } else if (pattern == "pageRand") {
