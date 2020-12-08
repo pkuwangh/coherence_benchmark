@@ -94,7 +94,9 @@ class ThreadPacket: public utils::BaseThreadPacket {
     ThreadPacket() :
         BaseThreadPacket(),
         mem_setup_ (nullptr),
-        bad_status_ (false)
+        bad_status_ (false),
+        read_only_ (false),
+        timer_enabled_ (false)
     { }
     ~ThreadPacket() = default;
 
@@ -129,12 +131,16 @@ class ThreadPacket: public utils::BaseThreadPacket {
     // pattern
     void setReadOnly(bool v) { read_only_ = v; }
     const bool& isReadOnly() const { return read_only_; }
+    // timer control
+    void setTimerEnabled(bool v = true) { timer_enabled_ = v; }
+    const bool& isTimerEnabled() const { return timer_enabled_; }
 
   private:
     MemSetup::Handle mem_setup_;
     uint32_t bad_status_;
     utils::Timer timer_;
     bool read_only_ = false;
+    bool timer_enabled_ = false;
 };
 
 bool warm_up(void *ptr, std::string post_fix = "")

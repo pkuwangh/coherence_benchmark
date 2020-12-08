@@ -71,8 +71,10 @@ int main(int argc, char **argv)
     std::cout << "Total iterations: " << main_iteration << ", data size (KB) per iter: " << size << std::endl;
     utils::end_timer("startup", std::cout);
     int sum = 0;
+    utils::start_timer("warmup");
     // warm-up some iterations
     sum |= func(mem_region, unrolled_loop_count, warmup_iteration);
+    utils::end_timer("warmup", std::cout);
     // timer
     utils::start_timer(tag);
     sum |= func(mem_region, unrolled_loop_count, main_iteration);

@@ -24,7 +24,7 @@ void *thread_rmw(void *ptr)
                 pthread_cond_wait(pkt->getFlowCond(part_idx), pkt->getFlowMutex(part_idx));
             }
             // per-thread work timer
-            if (i > 0) {
+            if (i > 0 && pkt->isTimerEnabled()) {
                 pkt->startTimer();
             }
             // real work
@@ -41,7 +41,7 @@ void *thread_rmw(void *ptr)
                 }
             }
             // stop timer
-            if (i > 0) {
+            if (i > 0 && pkt->isTimerEnabled()) {
                 pkt->endTimer();
             }
             // unlocking
@@ -58,6 +58,7 @@ void *thread_rmw(void *ptr)
 
 int main(int argc, char** argv)
 {
+    utils::start_timer("startup");
     // input parameters
     if (argc < 9) {
         std::cout << "Usage: ./multiple_rdwr"
@@ -68,7 +69,7 @@ int main(int argc, char** argv)
         std::cout << "\tstride (spatial) in B" << std::endl;
         std::cout << "\tpattern: stride, pageRand, allRand" << std::endl;
         std::cout << "\tthread mapping step: e.g. 2 leads to 0,1,2,3 -> 0,2,1,3" << std::endl;
-        std::cout << "\t1st iteration will be warm-up" << std::endl;
+        std::cout << "\tsame # iterations for both warmup and main measurement" << std::endl;
         exit(1);
     }
     const uint32_t region_size = atoi(argv[1]);
@@ -95,11 +96,20 @@ int main(int argc, char** argv)
         //    threads.getPacket(i).setReadOnly(true);
         //}
     }
-    utils::start_timer("all");
-    // create threads
+    utils::end_timer("startup", std::cout);
+    // warmup
+    utils::start_timer("warmup");
     threads.setRoutine(thread_rmw, [](const uint32_t& idx) { return true; });
     threads.create();
-    // wait all threads
+    threads.join();
+    utils::end_timer("warmup", std::cout);
+    // main measurement
+    for (uint32_t i = 0; i < num_threads; ++i) {
+        threads.getPacket(i).setTimerEnabled();
+    }
+    utils::start_timer("all");
+    threads.setRoutine(thread_rmw, [](const uint32_t& idx) { return true; });
+    threads.create();
     threads.join();
     utils::end_timer("all", std::cout);
     // check output & dump timers
