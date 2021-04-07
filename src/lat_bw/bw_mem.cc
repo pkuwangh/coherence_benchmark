@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     }
     const uint64_t page_size = 4096;
     const uint64_t line_size = 64;
-    const uint64_t use_hugepage = true;
+    const uint64_t use_hugepage = false;
     utils::MemRegion::Handle mem_region(
         new utils::MemRegion(region_size, page_size, line_size, use_hugepage));
     // input check

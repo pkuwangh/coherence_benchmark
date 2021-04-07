@@ -16,7 +16,7 @@ x86_env = common_env.Clone()
 x86_env.VariantDir('build/x86/src', 'src', duplicate=0)
 x86_env.VariantDir('build/x86/regress', 'regress', duplicate=0)
 x86_env.Append(CXXFLAGS=['-std=c++11', '-m64', '-pthread'])
-x86_env.Append(CXXFLAGS=['-g'])
+# x86_env.Append(CXXFLAGS=['-g'])
 
 build_envs['x86'] = x86_env
 

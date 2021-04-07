@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     const float core_freq_ghz = argc > 7 ? atof(argv[7]) : 1.6;
     std::string tag = "lat_mem_rd_" + pattern;
     // setup memory region
-    const bool use_hugepage = true;
+    const bool use_hugepage = false;
     utils::MemRegion::Handle mem_region(
         new utils::MemRegion(size, page, stride, use_hugepage));
     if (pattern == "stride") {

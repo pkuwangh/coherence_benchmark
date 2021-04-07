@@ -61,7 +61,7 @@ class MemSetup {
         num_iterations_ (num_iterations)
     {
         for (uint32_t i = 0; i < mem_regions_.size(); ++i) {
-            const bool use_hugepage = true;
+            const bool use_hugepage = false;
             mem_regions_[i] = std::make_shared<MemRegionExt>(
                 1024*partition_size, 1024*page_size, stride, use_hugepage,
                 num_partitions_);
