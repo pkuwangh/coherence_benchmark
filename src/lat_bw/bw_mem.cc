@@ -8,9 +8,12 @@
 #include "utils/lib_timing.hh"
 
 void print_usage() {
-    std::cout << "[./bw_mem] [size in KB] [action] [warmup iteration] [main iteration] <core freq in GHz>" << std::endl;
+    std::cout << "[./bw_mem] [total size in KB] [action] [warmup iters] [main iters] [core freq] <region2 type> <region2 size>" << std::endl;
     std::cout << "\tavailable action: prd, pwr, prmw, pcp, frd, fwr, frmw, fcp" << std::endl;
-    std::cout << "Example: ./bw_mem 2048 prd 100 2.3" << std::endl;
+    std::cout << "\tregion2 type: native, device" << std::endl;
+    std::cout << "\tregion2 size: subset of total size, in KB" << std::endl;
+    std::cout << "Example: ./bw_mem 4096 prd 10 100 2.3" << std::endl;
+    std::cout << "Example: ./bw_mem 4096 prd 10 100 2.3 device 2048" << std::endl;
 }
 
 int benchmark_prd(const utils::MemRegion::Handle& mem_region, uint64_t loop_count, uint64_t num_iter);
@@ -25,7 +28,7 @@ int benchmark_pcp(const utils::MemRegion::Handle& mem_region, uint64_t loop_coun
 int main(int argc, char **argv)
 {
     utils::start_timer("startup");
-    if (argc < 5) {
+    if (argc < 6) {
         print_usage();
         return 1;
     }
@@ -34,7 +37,17 @@ int main(int argc, char **argv)
     const std::string action = argv[2];
     const uint64_t warmup_iteration = atoi(argv[3]);
     const uint64_t main_iteration = atoi(argv[4]);
-    const float core_freq_ghz = argc > 5 ? atof(argv[5]) : 1.6;
+    const float core_freq_ghz = atof(argv[5]);
+    bool use_hugepage = false;
+    utils::MemType region2_type = utils::MemType::NATIVE;
+    uint64_t region2_size = 0;
+    if (argc >= 8) {
+        const std::string r2_type_str = argv[6];
+        if (r2_type_str == "device" || r2_type_str == "Device") {
+            region2_type = utils::MemType::DEVICE;
+        }
+        region2_size = 1024 * static_cast<uint64_t>(atoi(argv[7]));
+    }
     // action
     std::function<int(const utils::MemRegion::Handle&, uint64_t, uint64_t)> func;
     if (action == "prd") func = benchmark_prd;
@@ -57,9 +70,9 @@ int main(int argc, char **argv)
     }
     const uint64_t page_size = 4096;
     const uint64_t line_size = 64;
-    const uint64_t use_hugepage = false;
     utils::MemRegion::Handle mem_region(
-        new utils::MemRegion(region_size, page_size, line_size, use_hugepage));
+        new utils::MemRegion(
+            region_size, page_size, line_size, use_hugepage, region2_type, region2_size));
     // input check
     const uint64_t num_lines = mem_region->numLines();
     // input check
@@ -68,7 +81,7 @@ int main(int argc, char **argv)
     const uint64_t unrolled_loop_count = size / loop_size;
     // run
     std::cout << "Memory region setup done; BW test begins ..." << std::endl;
-    std::cout << "Total iterations: " << main_iteration << ", data size (KB) per iter: " << size << std::endl;
+    std::cout << "Total iterations: " << main_iteration << ", data size per iter: " << size << std::endl;
     utils::end_timer("startup", std::cout);
     int sum = 0;
     utils::start_timer("warmup");

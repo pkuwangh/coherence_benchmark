@@ -7,6 +7,12 @@
 
 namespace utils {
 
+enum class MemType : char {
+  NATIVE='N',
+  DEVICE='D',
+};
+
+
 class MemRegion {
   public:
     using Handle = std::shared_ptr<MemRegion>;
@@ -15,7 +21,9 @@ class MemRegion {
       uint64_t size,
       uint64_t page_size,
       uint64_t line_size,
-      bool use_hugepage);
+      bool use_hugepage=false,
+      MemType mem_type_region2=MemType::NATIVE,
+      uint64_t size_region2=0);
     virtual ~MemRegion();
 
     // initialize to different patterns
@@ -26,21 +34,33 @@ class MemRegion {
     void dump();
     uint64_t numLines() const { return num_pages_ * num_lines_in_page_; }
     // entry point
-    char** getStartPoint() const { return (char**)base_; }
-    char** getHalfPoint() const { return (char**)(base_ + size_/2); }
-    char** getFirstQuarterPoint() const { return (char**)(base_ + size_/4); }
-    char** getThirdQuarterPoint() const { return (char**)(base_ + size_/4*3); }
+    char** getStartPoint() const { return (char**)getOffsetAddr_(0); }
+    char** getHalfPoint() const { return (char**)getOffsetAddr_(size_ / 2); }
 
   private:
-    void randomizeSequence_(std::vector<uint64_t>& sequence, uint64_t size, uint64_t unit);
+    void error_(std::string message);
+    char* allocNative_(const uint64_t& size, char*& raw_addr);
+    char* allocDevice_(const uint64_t& size);
+    void randomizeSequence_(
+        std::vector<uint64_t>& sequence,
+        uint64_t size,
+        uint64_t unit,
+        bool in_order=false);
+    char* getOffsetAddr_(uint64_t offset) const;
 
-    uint64_t size_;       // size of memory region in Bytes
-    uint64_t page_size_;   // probably hard-coded to 4KB
-    uint64_t line_size_;   // not necessarily the cacheline size; i.e. preferred spatial stride
+    uint64_t size_;         // size of memory region in Bytes
+    uint64_t page_size_;    // not meant to be OS page size; better to be multiple of OS page
+    uint64_t line_size_;    // not necessarily the cacheline size; i.e. preferred spatial stride
+    bool use_hugepage_ = false;
+    MemType mem_type_region2_ = MemType::NATIVE;
+    uint64_t size_region1_;
+    uint64_t size_region2_;
 
-    char*   addr_ = NULL;  // raw pointer returned by malloc
-    char*   base_ = NULL;   // page-aligned pointer
-    const bool use_hugepage_ = false;
+    int     fd_ = -1;
+    char*   addr1_ = NULL;
+    char*   addr2_ = NULL;
+    char*   raw_addr1_ = NULL;
+    char*   raw_addr2_ = NULL;
 
     uint64_t num_pages_;
     uint64_t num_lines_in_page_;

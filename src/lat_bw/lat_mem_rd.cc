@@ -7,10 +7,16 @@
 #include "utils/lib_timing.hh"
 
 void print_usage() {
-    std::cout << "[./lat_mem_rd] [size in KB] [page in KB] [stride in B] [pattern] [warmup iteration] [main iteration] <core freq in GHz>"
+    std::cout << "[./lat_mem_rd] [total size] [page] [stride] [pattern] [warmup iters] [main iters] [core freq] <OS page> <region2 type> <region2 size>"
               << std::endl;
+    std::cout << "\ttotal size & page sizein KB; stride size in B" << std::endl;
     std::cout << "\tavailable patterns: stride, pageRand, allRand" << std::endl;
-    std::cout << "Example: ./lat_mem_rd 2048 4 64 pageRand 10 100 2.3" << std::endl;
+    std::cout << "\tOS page: default, hugePage" << std::endl;
+    std::cout << "\tregion2 type: native, device" << std::endl;
+    std::cout << "\tregion2 size: subset of total size, in KB" << std::endl;
+    std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3" << std::endl;
+    std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3 huagePage" << std::endl;
+    std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3 default device 2048" << std::endl;
 }
 
 bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_count, uint64_t num_iter);
@@ -18,7 +24,7 @@ bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_c
 int main(int argc, char **argv)
 {
     utils::start_timer("startup");
-    if (argc < 7) {
+    if (argc < 8) {
         print_usage();
         return 1;
     }
@@ -29,12 +35,26 @@ int main(int argc, char **argv)
     const std::string pattern = argv[4];
     const uint64_t warmup_iteration = atoi(argv[5]);
     const uint64_t main_iteration = atoi(argv[6]);
-    const float core_freq_ghz = argc > 7 ? atof(argv[7]) : 1.6;
+    const float core_freq_ghz = atof(argv[7]);
+    bool use_hugepage = false;
+    if (argc >= 9) {
+        const std::string os_page = argv[8];
+        use_hugepage = (os_page == "hugePage" || os_page == "hugepage");
+    }
+    utils::MemType region2_type = utils::MemType::NATIVE;
+    uint64_t region2_size = 0;
+    if (argc >= 11) {
+        const std::string r2_type_str = argv[9];
+        if (r2_type_str == "device" || r2_type_str == "Device") {
+            region2_type = utils::MemType::DEVICE;
+        }
+        region2_size = 1024 * static_cast<uint64_t>(atoi(argv[10]));
+    }
     std::string tag = "lat_mem_rd_" + pattern;
     // setup memory region
-    const bool use_hugepage = false;
     utils::MemRegion::Handle mem_region(
-        new utils::MemRegion(size, page, stride, use_hugepage));
+        new utils::MemRegion(
+            size, page, stride, use_hugepage, region2_type, region2_size));
     if (pattern == "stride") {
         mem_region->stride_init();
     } else if (pattern == "pageRand") {
