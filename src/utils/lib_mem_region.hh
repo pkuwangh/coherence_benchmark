@@ -20,6 +20,7 @@ class MemRegion {
 
     MemRegion(
       uint64_t size,
+      uint64_t active_size,
       uint64_t page_size,
       uint64_t line_size,
       bool use_hugepage=false,
@@ -33,10 +34,11 @@ class MemRegion {
     void all_random_init();
     // helper
     void dump();
-    uint64_t numLines() const { return num_pages_ * num_lines_in_page_; }
+    uint64_t numAllLines() const { return num_all_pages_ * num_lines_in_page_; }
+    uint64_t numActiveLines() const { return num_active_pages_ * num_lines_in_page_; }
     // entry point
     char** getStartPoint() const { return (char**)getOffsetAddr_(0); }
-    char** getHalfPoint() const { return (char**)getOffsetAddr_(size_ / 2); }
+    char** getHalfPoint() const { return (char**)getOffsetAddr_(active_size_ / 2); }
 
   private:
     void error_(std::string message);
@@ -51,6 +53,7 @@ class MemRegion {
     char* getOffsetAddr_(uint64_t offset) const;
 
     uint64_t size_;         // size of memory region in Bytes
+    uint64_t active_size_;  // active size of memory region in Bytes
     uint64_t page_size_;    // not meant to be OS page size; better to be multiple of OS page
     uint64_t line_size_;    // not necessarily the cacheline size; i.e. preferred spatial stride
     bool use_hugepage_ = false;
@@ -65,7 +68,8 @@ class MemRegion {
     char*    raw_addr2_ = NULL;
     uint64_t raw_size2_ = 0;
 
-    uint64_t num_pages_;
+    uint64_t num_all_pages_;
+    uint64_t num_active_pages_;
     uint64_t num_lines_in_page_;
 };
 

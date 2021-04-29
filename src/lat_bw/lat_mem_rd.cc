@@ -7,17 +7,20 @@
 #include "utils/lib_timing.hh"
 
 void print_usage() {
-    std::cout << "[./lat_mem_rd] [total size] [page] [stride] [pattern] [warmup iters] [main iters] [core freq] <OS page> <region2 type> <region2 size>"
+    std::cout << "[./lat_mem_rd] [total size] [page] [stride] [pattern] [warmup iters] [main iters] [core freq] <OS page> <region2 type> <region2 size> <active size>"
               << std::endl;
-    std::cout << "\ttotal size & page sizein KB; stride size in B" << std::endl;
+    std::cout << "\ttotal size & page size in KB; stride size in B" << std::endl;
     std::cout << "\tavailable patterns: stride, pageRand, allRand" << std::endl;
     std::cout << "\tOS page: default, hugePage" << std::endl;
     std::cout << "\tregion2 type: native, remote, device" << std::endl;
     std::cout << "\tregion2 size: subset of total size, in KB" << std::endl;
+    std::cout << "\tactiive size: subset of total size, in KB" << std::endl;
     std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3" << std::endl;
     std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3 huagePage" << std::endl;
     std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3 default remote 2048" << std::endl;
     std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3 default device 2048" << std::endl;
+    std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3 default native 0 2048" << std::endl;
+    std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3 default remote 4096 2048" << std::endl;
 }
 
 bool benchmark_loads(const utils::MemRegion::Handle &mem_region, uint64_t loop_count, uint64_t num_iter);
@@ -53,11 +56,15 @@ int main(int argc, char **argv)
         }
         region2_size = 1024 * static_cast<uint64_t>(atoi(argv[10]));
     }
+    uint64_t active_size = size;
+    if (argc >= 12) {
+        active_size = 1024 * static_cast<uint64_t>(atoi(argv[11]));
+    }
     std::string tag = "lat_mem_rd_" + pattern;
     // setup memory region
     utils::MemRegion::Handle mem_region(
         new utils::MemRegion(
-            size, page, stride, use_hugepage, region2_type, region2_size));
+            size, active_size, page, stride, use_hugepage, region2_type, region2_size));
     if (pattern == "stride") {
         mem_region->stride_init();
     } else if (pattern == "pageRand") {
@@ -70,7 +77,7 @@ int main(int argc, char **argv)
     }
     // input check
     static const uint64_t loop_unroll = 256;
-    const uint64_t num_chases = mem_region->numLines();
+    const uint64_t num_chases = mem_region->numActiveLines();
     assert (num_chases % loop_unroll == 0);
     const uint64_t unrolled_loop_count = num_chases / loop_unroll;
     // run

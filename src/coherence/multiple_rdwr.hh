@@ -24,7 +24,7 @@ class MemRegionExt : public utils::MemRegion {
         uint32_t line_size,
         bool use_hugepage,
         uint32_t num_partitions) :
-        utils::MemRegion(region_size, page_size, line_size, use_hugepage)
+        utils::MemRegion(region_size, region_size, page_size, line_size, use_hugepage)
     {
         flow_mutex.reset(new pthread_mutex_t);
         flow_cond.reset(new pthread_cond_t);
@@ -104,7 +104,7 @@ class ThreadPacket: public utils::BaseThreadPacket {
 
     uint32_t getNumIterations() const { return mem_setup_->num_iterations_; }
     uint32_t getNumPartitions() const { return mem_setup_->num_partitions_; }
-    uint32_t getNumLines() const { return mem_setup_->mem_regions_[0]->numLines(); }
+    uint32_t getNumLines() const { return mem_setup_->mem_regions_[0]->numActiveLines(); }
     char** getStartPoint(const uint32_t& part_idx) const {
         return mem_setup_->mem_regions_[part_idx]->getStartPoint();
     }

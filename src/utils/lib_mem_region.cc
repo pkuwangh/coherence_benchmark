@@ -15,17 +15,20 @@ namespace utils {
 
 MemRegion::MemRegion(
         uint64_t size,
+        uint64_t active_size,
         uint64_t page_size,
         uint64_t line_size,
         bool use_hugepage,
         MemType mem_type_region2,
         uint64_t size_region2) :
     size_ (size),
+    active_size_ (active_size),
     page_size_ (page_size),
     line_size_ (line_size),
     mem_type_region2_ (mem_type_region2),
     size_region2_ (size_region2),
-    num_pages_ (size_ / page_size_),
+    num_all_pages_ (size_ / page_size_),
+    num_active_pages_ (active_size_ / page_size_),
     num_lines_in_page_ (page_size_ / line_size_),
     use_hugepage_ (use_hugepage)
 {
@@ -179,13 +182,6 @@ void MemRegion::randomizeSequence_(
             break;
         }
     }
-    // half should still be half
-    for (uint32_t i = 1; i < size; ++i) {
-        if (sequence[i] == size*unit/2) {
-            sequence[i] = sequence[size/2];
-            sequence[size/2] = size*unit/2;
-        }
-    }
 }
 
 char* MemRegion::getOffsetAddr_(uint64_t offset) const {
@@ -201,7 +197,7 @@ char* MemRegion::getOffsetAddr_(uint64_t offset) const {
 void MemRegion::stride_init()
 {
     uint64_t i = 0;
-    for (i = line_size_; i < size_; i += line_size_) {
+    for (i = line_size_; i < active_size_; i += line_size_) {
         *(char**)getOffsetAddr_(i - line_size_) = (char*)getOffsetAddr_(i);
     }
     *(char**)getOffsetAddr_(i - line_size_) = (char*)getOffsetAddr_(0);
@@ -210,19 +206,19 @@ void MemRegion::stride_init()
 // create a circular list of pointers with random-in-page
 void MemRegion::page_random_init()
 {
-    std::vector<uint64_t> pages_(num_pages_, 0);
+    std::vector<uint64_t> pages_(num_active_pages_, 0);
     std::vector<uint64_t> linesInPage_(num_lines_in_page_, 0);
-    randomizeSequence_(pages_, num_pages_, page_size_, true);
+    randomizeSequence_(pages_, num_active_pages_, page_size_, true);
     randomizeSequence_(linesInPage_, num_lines_in_page_, line_size_);
     // run through the pages
-    for (uint64_t i = 0; i < num_pages_; ++i) {
+    for (uint64_t i = 0; i < num_active_pages_; ++i) {
         // run through the lines within a page
         for (uint64_t j = 0; j < num_lines_in_page_ - 1; ++j) {
             *(char**)getOffsetAddr_(pages_.at(i) + linesInPage_.at(j))
                 = (char*)getOffsetAddr_(pages_.at(i) + linesInPage_.at(j + 1));
         }
         // jump the next page
-        uint64_t next_page = (i == num_pages_ - 1) ? 0 : (i + 1);
+        uint64_t next_page = (i == num_active_pages_ - 1) ? 0 : (i + 1);
         *(char**)getOffsetAddr_(pages_.at(i) + linesInPage_.at(num_lines_in_page_ - 1))
             = (char*)getOffsetAddr_(pages_.at(next_page) + linesInPage_.at(0));
     }
@@ -231,7 +227,7 @@ void MemRegion::page_random_init()
 // create a circular list of pointers with all-random
 void MemRegion::all_random_init()
 {
-    const uint64_t num_lines = numLines();
+    const uint64_t num_lines = numActiveLines();
     std::vector<uint64_t> lines_(num_lines, 0);
     randomizeSequence_(lines_, num_lines, line_size_);
     // run through the lines
@@ -245,7 +241,8 @@ void MemRegion::dump()
 {
     std::cout << "================================" << std::endl;
     std::cout << "size=" << size_ << ", page=" << page_size_ << ", line=" << line_size_
-        << ", numPage=" << num_pages_ << ", numLinesInPage=" << num_lines_in_page_ << std::endl;
+        << ", numPage=" << num_active_pages_ << "/" << num_all_pages_
+        << ", numLinesInPage=" << num_lines_in_page_ << std::endl;
     const uint64_t start_addr = addr1_ ? reinterpret_cast<uint64_t>(addr1_) : reinterpret_cast<uint64_t>(addr2_);
     for (uint64_t i = 0; i < size_; i += line_size_) {
         uint64_t curr = reinterpret_cast<uint64_t>(getOffsetAddr_(i));
@@ -258,7 +255,7 @@ void MemRegion::dump()
     }
     //std::cout << "--------------------------------" << std::endl;
     //char** p = (char**)addr1_;
-    //for (uint64_t i = 0; i < numLines(); ++i) {
+    //for (uint64_t i = 0; i < numActiveLines(); ++i) {
     //    uint64_t curr = reinterpret_cast<uint64_t>(p);
     //    uint64_t next = reinterpret_cast<uint64_t>(*p);
     //    uint64_t curr_offset = (curr - start_addr)) / line_size_;
