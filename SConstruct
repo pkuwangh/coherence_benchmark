@@ -5,7 +5,7 @@ print('..Building Coherence Benchmark')
 common_env = Environment(
         CPPPATH=[],
         CPPDEFINES=[],
-        LIBS=['pthread'],
+        LIBS=['pthread', 'numa'],
         CXXFLAGS=[],
         SCONS_CXX_STANDARD='c++11')
 

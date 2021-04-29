@@ -10,9 +10,10 @@
 void print_usage() {
     std::cout << "[./bw_mem] [total size in KB] [action] [warmup iters] [main iters] [core freq] <region2 type> <region2 size>" << std::endl;
     std::cout << "\tavailable action: prd, pwr, prmw, pcp, frd, fwr, frmw, fcp" << std::endl;
-    std::cout << "\tregion2 type: native, device" << std::endl;
+    std::cout << "\tregion2 type: native, remote, device" << std::endl;
     std::cout << "\tregion2 size: subset of total size, in KB" << std::endl;
     std::cout << "Example: ./bw_mem 4096 prd 10 100 2.3" << std::endl;
+    std::cout << "Example: ./bw_mem 4096 prd 10 100 2.3 remote 2048" << std::endl;
     std::cout << "Example: ./bw_mem 4096 prd 10 100 2.3 device 2048" << std::endl;
 }
 
@@ -43,7 +44,9 @@ int main(int argc, char **argv)
     uint64_t region2_size = 0;
     if (argc >= 8) {
         const std::string r2_type_str = argv[6];
-        if (r2_type_str == "device" || r2_type_str == "Device") {
+        if (r2_type_str == "remote" || r2_type_str == "Remote") {
+            region2_type = utils::MemType::REMOTE;
+        } else if (r2_type_str == "device" || r2_type_str == "Device") {
             region2_type = utils::MemType::DEVICE;
         }
         region2_size = 1024 * static_cast<uint64_t>(atoi(argv[7]));

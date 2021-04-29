@@ -43,21 +43,26 @@ int main() {
         }
     };
 
-    //test({8192, 4096, 512}, false, utils::MemType::NATIVE, 0, "stride");
+    // -- basic patterns
+    test({8192, 4096, 512}, false, utils::MemType::NATIVE, 0, "stride");
+    test({8192, 4096, 512}, false, utils::MemType::NATIVE, 0, "pageRand");
+    test({8192, 4096, 512}, false, utils::MemType::NATIVE, 0, "allRand");
+
+    // -- hugepage
+    //test({4194304, 1048576, 524288}, true, utils::MemType::NATIVE, 0, "stride");
+
+    // -- join 2 regions
     //test({8192, 4096, 512}, false, utils::MemType::NATIVE, 4096, "stride");
-    //test({8192, 4096, 512}, false, utils::MemType::NATIVE, 0, "pageRand");
     //test({8192, 4096, 512}, false, utils::MemType::NATIVE, 4096, "pageRand");
     //test({8192, 8192, 512}, false, utils::MemType::NATIVE, 4096, "pageRand");
     //test({8192, 8192, 512}, false, utils::MemType::NATIVE, 4096, "allRand");
 
-    //test({4194304, 1048576, 524288}, true, utils::MemType::NATIVE, 0, "stride");
+    // -- device-dax
+    //test({2097152, 1048576, 262144}, false, utils::MemType::DEVICE, 2097152, "stride");
+    //test({16777216, 16777216, 1048576}, false, utils::MemType::DEVICE, 8388608, "stride");
 
-    test({2097152,  1048576, 262144}, false, utils::MemType::NATIVE, 2097152, "stride");
-    test({536870912, 536870912, 67108864}, false, utils::MemType::NATIVE, 536870912, "stride");
-
-    test({2097152, 1048576, 262144}, true, utils::MemType::DEVICE, 2097152, "stride");
-
-    test({16777216, 16777216, 1048576}, false, utils::MemType::DEVICE, 8388608, "stride");
+    // -- numa_alloc
+    test({8192, 4096, 512}, false, utils::MemType::REMOTE, 8192, "stride");
 
     return 0;
 }

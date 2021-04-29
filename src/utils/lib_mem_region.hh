@@ -9,6 +9,7 @@ namespace utils {
 
 enum class MemType : char {
   NATIVE='N',
+  REMOTE='R',
   DEVICE='D',
 };
 
@@ -40,6 +41,7 @@ class MemRegion {
   private:
     void error_(std::string message);
     char* allocNative_(const uint64_t& size, char*& raw_addr);
+    char* allocRemote_(const uint64_t& size, char*& raw_addr, uint64_t& raw_size);
     char* allocDevice_(const uint64_t& size);
     void randomizeSequence_(
         std::vector<uint64_t>& sequence,
@@ -56,11 +58,12 @@ class MemRegion {
     uint64_t size_region1_;
     uint64_t size_region2_;
 
-    int     fd_ = -1;
-    char*   addr1_ = NULL;
-    char*   addr2_ = NULL;
-    char*   raw_addr1_ = NULL;
-    char*   raw_addr2_ = NULL;
+    int      fd_ = -1;
+    char*    addr1_ = NULL;
+    char*    addr2_ = NULL;
+    char*    raw_addr1_ = NULL;
+    char*    raw_addr2_ = NULL;
+    uint64_t raw_size2_ = 0;
 
     uint64_t num_pages_;
     uint64_t num_lines_in_page_;

@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <string>
 #include <fcntl.h>
+#include <numa.h>
 #include <unistd.h>
 #include <sys/mman.h>
 
@@ -44,6 +45,8 @@ MemRegion::MemRegion(
     if (size_region2_ > 0) {
         if (mem_type_region2_ == MemType::NATIVE) {
             addr2_ = allocNative_(size_region2_, raw_addr2_);
+        } else if (mem_type_region2_ == MemType::REMOTE) {
+            addr2_ = allocRemote_(size_region2_, raw_addr2_, raw_size2_);
         } else {
             addr2_ = allocDevice_(size_region2_);
         }
@@ -70,6 +73,8 @@ MemRegion::~MemRegion() {
             } else {
                 free(raw_addr2_);
             }
+        } else if (mem_type_region2_ == MemType::REMOTE) {
+            numa_free(raw_addr2_, raw_size2_);
         } else {
             munmap(addr2_, size_region2_);
             if (fd_ != -1) {
@@ -97,6 +102,7 @@ char* MemRegion::allocNative_(const uint64_t& size, char*& raw_addr) {
             MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB,
             0, 0
         ));
+        std::cout << "native hugepage" << std::endl;
         if ((int64_t)addr == (int64_t)-1) {
             error_("mmap failed for hugepage");
         }
@@ -104,6 +110,20 @@ char* MemRegion::allocNative_(const uint64_t& size, char*& raw_addr) {
         uint64_t alloc_size = size + 2 * page_size_;
         raw_addr = (char*)malloc(alloc_size);
         addr = raw_addr + page_size_ - (uint64_t)raw_addr % page_size_;
+        std::cout << "native malloc" << std::endl;
+    }
+    return addr;
+}
+
+char* MemRegion::allocRemote_(const uint64_t& size, char*& raw_addr, uint64_t& raw_size) {
+    char* addr = NULL;
+    if (use_hugepage_) {
+        error_("not yet support hugepage on remote node");
+    } else {
+        raw_size = size + 2 * page_size_;
+        raw_addr = (char*)numa_alloc_onnode(raw_size, 1);
+        addr = raw_addr + page_size_ - (uint64_t)raw_addr % page_size_;
+        std::cout << "remote numa_alloc" << std::endl;
     }
     return addr;
 }
@@ -117,16 +137,7 @@ char* MemRegion::allocDevice_(const uint64_t& size) {
     }
     // mmap from fd
     if (use_hugepage_) {
-        addr = ((char*)mmap(
-            0x0, size,
-            PROT_READ | PROT_WRITE,
-            //MAP_SHARED | MAP_HUGETLB,
-            MAP_SHARED,
-            fd_, 0
-        ));
-        if ((int64_t)addr == (int64_t)-1) {
-            error_("mmap failed for hugepage from device memory");
-        }
+        error_("not support hugepage on device-dax");
     } else {
         addr = ((char*)mmap(
             0x0, size,
@@ -137,6 +148,7 @@ char* MemRegion::allocDevice_(const uint64_t& size) {
         if ((int64_t)addr == (int64_t)-1) {
             error_("mmap failed from device memory");
         }
+        std::cout << "device mmap" << std::endl;
     }
     return addr;
 }
