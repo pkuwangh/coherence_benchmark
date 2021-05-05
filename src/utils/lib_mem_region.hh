@@ -39,21 +39,25 @@ class MemRegion {
     // entry point
     char** getStartPoint() const { return (char**)getOffsetAddr_(0); }
     char** getHalfPoint() const { return (char**)getOffsetAddr_(active_size_ / 2); }
+    // migrate pages
+    void migrate(int target_node);
 
   private:
     void error_(std::string message);
-    char* allocNative_(const uint64_t& size, char*& raw_addr);
+    char* allocNative_(const uint64_t& size, char*& raw_addr, uint64_t& raw_size);
     char* allocRemote_(const uint64_t& size, char*& raw_addr, uint64_t& raw_size);
-    char* allocDevice_(const uint64_t& size);
+    char* allocDevice_(const uint64_t& size, char*& raw_addr, uint64_t& raw_size);
     void randomizeSequence_(
         std::vector<uint64_t>& sequence,
         uint64_t size,
         uint64_t unit,
         bool in_order=false);
     char* getOffsetAddr_(uint64_t offset) const;
+    void migratePages_(char*& addr, uint64_t size, int target_node);
 
     uint64_t size_;         // size of memory region in Bytes
     uint64_t active_size_;  // active size of memory region in Bytes
+    uint64_t os_page_size_; // os page size in Bytes
     uint64_t page_size_;    // not meant to be OS page size; better to be multiple of OS page
     uint64_t line_size_;    // not necessarily the cacheline size; i.e. preferred spatial stride
     bool use_hugepage_ = false;
@@ -66,6 +70,7 @@ class MemRegion {
     char*    addr2_ = NULL;
     char*    raw_addr1_ = NULL;
     char*    raw_addr2_ = NULL;
+    uint64_t raw_size1_ = 0;
     uint64_t raw_size2_ = 0;
 
     uint64_t num_all_pages_;

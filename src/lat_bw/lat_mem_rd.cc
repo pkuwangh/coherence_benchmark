@@ -60,6 +60,11 @@ int main(int argc, char **argv)
     if (argc >= 12) {
         active_size = 1024 * static_cast<uint64_t>(atoi(argv[11]));
     }
+    bool migrate = false;
+    if (argc >= 13) {
+        std::string do_migrate = argv[12];
+        migrate = (do_migrate == "migrate" || do_migrate == "Migrate");
+    }
     std::string tag = "lat_mem_rd_" + pattern;
     // setup memory region
     utils::MemRegion::Handle mem_region(
@@ -75,6 +80,7 @@ int main(int argc, char **argv)
         print_usage();
         return 1;
     }
+    //mem_region->dump();
     // input check
     static const uint64_t loop_unroll = 256;
     const uint64_t num_chases = mem_region->numActiveLines();
@@ -93,6 +99,18 @@ int main(int argc, char **argv)
     utils::start_timer(tag);
     error |= benchmark_loads(mem_region, unrolled_loop_count, main_iteration);
     utils::end_timer(tag, std::cout, num_chases * main_iteration, core_freq_ghz);
+    // page migration
+    if (migrate) {
+        utils::start_timer("migration");
+        mem_region->migrate(1);
+        utils::end_timer("migration", std::cout);
+        // warm-up
+        error |= benchmark_loads(mem_region, unrolled_loop_count, warmup_iteration);
+        // benchmark
+        utils::start_timer(tag);
+        error |= benchmark_loads(mem_region, unrolled_loop_count, main_iteration);
+        utils::end_timer(tag, std::cout, num_chases * main_iteration, core_freq_ghz);
+    }
     return error;
 }
 

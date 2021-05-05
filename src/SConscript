@@ -34,11 +34,11 @@ class BuildTarget:
 
 class UnitTest(BuildTarget):
     def __init__(self, target, *srcs):
-        BuildTarget.__init__(self, 'unittest', target, *srcs)
+        BuildTarget.__init__(self, 'test', target, *srcs)
 
 class MiscTest(BuildTarget):
     def __init__(self, target, *srcs):
-        BuildTarget.__init__(self, 'misctest', target, *srcs)
+        BuildTarget.__init__(self, 'misc', target, *srcs)
 
 class Benchmark(BuildTarget):
     def __init__(self, target, *srcs):

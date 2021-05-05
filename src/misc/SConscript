@@ -6,3 +6,4 @@ Import('*')
 # add misc-test targets
 MiscTest('pthread_mutex', 'pthread_mutex.cc')
 MiscTest('pthread_rdwr', 'pthread_rdwr.cc')
+MiscTest('move_pages', 'move_pages.cc')

@@ -1,13 +1,13 @@
 #include <cassert>
 #include <cstdlib>
-#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include <fcntl.h>
-#include <numa.h>
-#include <unistd.h>
-#include <sys/mman.h>
+#include <fcntl.h>      // open
+#include <numa.h>       // numa_*
+#include <numaif.h>     // move_pages
+#include <unistd.h>     // close
+#include <sys/mman.h>   // mmap
 
 #include "utils/lib_mem_region.hh"
 
@@ -32,6 +32,9 @@ MemRegion::MemRegion(
     num_lines_in_page_ (page_size_ / line_size_),
     use_hugepage_ (use_hugepage)
 {
+    os_page_size_ = getpagesize();
+    std::cout << "OS page size: " << os_page_size_ << std::endl;
+
     size_region1_ = size - size_region2_;
     // sanity checks
     if (size_region2_ > size_) {
@@ -39,22 +42,24 @@ MemRegion::MemRegion(
     }
     // allocate & init 1st region
     if (size_region1_ > 0) {
-        addr1_ = allocNative_(size_region1_, raw_addr1_);
-        std::cout << "Region-1 address: 0x" << std::hex
-            << reinterpret_cast<uint64_t>(addr1_) << std::dec << std::endl;
+        addr1_ = allocNative_(size_region1_, raw_addr1_, raw_size1_);
+        std::cout << "Region-1 addr=0x" << std::hex << reinterpret_cast<uint64_t>(addr1_)
+            << " raw_addr=0x" << reinterpret_cast<uint64_t>(raw_addr1_)
+            << " 4K-page=" << std::dec << raw_size1_ / os_page_size_ << std::endl;
         memset(addr1_, 0, size_region1_);
     }
     // allocate & init 2nd region
     if (size_region2_ > 0) {
         if (mem_type_region2_ == MemType::NATIVE) {
-            addr2_ = allocNative_(size_region2_, raw_addr2_);
+            addr2_ = allocNative_(size_region2_, raw_addr2_, raw_size2_);
         } else if (mem_type_region2_ == MemType::REMOTE) {
             addr2_ = allocRemote_(size_region2_, raw_addr2_, raw_size2_);
         } else {
-            addr2_ = allocDevice_(size_region2_);
+            addr2_ = allocDevice_(size_region2_, raw_addr2_, raw_size2_);
         }
-        std::cout << "Region-2 address: 0x" << std::hex
-            << reinterpret_cast<uint64_t>(addr2_) << std::dec << std::endl;
+        std::cout << "Region-2 addr=0x" << std::hex << reinterpret_cast<uint64_t>(addr2_)
+            << " raw_addr=0x" << reinterpret_cast<uint64_t>(raw_addr2_)
+            << " 4K-page=" << std::dec << raw_size2_ / os_page_size_ << std::endl;
         memset(addr2_, 0, size_region2_);
     }
     // use a fixed seed
@@ -96,7 +101,7 @@ void MemRegion::error_(std::string message) {
     exit(1);
 }
 
-char* MemRegion::allocNative_(const uint64_t& size, char*& raw_addr) {
+char* MemRegion::allocNative_(const uint64_t& size, char*& raw_addr, uint64_t& raw_size) {
     char* addr = NULL;
     if (use_hugepage_) {
         addr = ((char*)mmap(
@@ -109,10 +114,12 @@ char* MemRegion::allocNative_(const uint64_t& size, char*& raw_addr) {
         if ((int64_t)addr == (int64_t)-1) {
             error_("mmap failed for hugepage");
         }
+        raw_addr = addr;
+        raw_size = size;
     } else {
-        uint64_t alloc_size = size + 2 * page_size_;
-        raw_addr = (char*)malloc(alloc_size);
-        addr = raw_addr + page_size_ - (uint64_t)raw_addr % page_size_;
+        raw_size = size + os_page_size_;
+        raw_addr = (char*)malloc(raw_size);
+        addr = raw_addr + os_page_size_ - (uint64_t)raw_addr % os_page_size_;
         std::cout << "native malloc" << std::endl;
     }
     return addr;
@@ -123,15 +130,15 @@ char* MemRegion::allocRemote_(const uint64_t& size, char*& raw_addr, uint64_t& r
     if (use_hugepage_) {
         error_("not yet support hugepage on remote node");
     } else {
-        raw_size = size + 2 * page_size_;
+        raw_size = size + os_page_size_;
         raw_addr = (char*)numa_alloc_onnode(raw_size, 1);
-        addr = raw_addr + page_size_ - (uint64_t)raw_addr % page_size_;
-        std::cout << "remote numa_alloc" << std::endl;
+        addr = raw_addr + os_page_size_ - (uint64_t)raw_addr % os_page_size_;
+        std::cout << "remote numa_malloc" << std::endl;
     }
     return addr;
 }
 
-char* MemRegion::allocDevice_(const uint64_t& size) {
+char* MemRegion::allocDevice_(const uint64_t& size, char*& raw_addr, uint64_t& raw_size) {
     char* addr = NULL;
     const std::string dev_mem = "/dev/dax0.0";
     fd_ = open(dev_mem.c_str(), O_RDWR | O_SYNC);
@@ -152,6 +159,8 @@ char* MemRegion::allocDevice_(const uint64_t& size) {
             error_("mmap failed from device memory");
         }
         std::cout << "device mmap" << std::endl;
+        raw_addr = addr;
+        raw_size = size;
     }
     return addr;
 }
@@ -235,6 +244,70 @@ void MemRegion::all_random_init()
         *(char**)getOffsetAddr_(lines_.at(i)) = (char*)getOffsetAddr_(lines_.at(i + 1));
     }
     *(char**)getOffsetAddr_(lines_.at(num_lines - 1)) = (char*)getOffsetAddr_(lines_.at(0));
+}
+
+// migrate pages to another node
+void MemRegion::migratePages_(char*& addr, uint64_t size, int target_node)
+{
+    const bool verbose = true;
+    uint32_t num_os_pages = size / os_page_size_;
+    void** pages = (void**)malloc(sizeof(char*) * num_os_pages);
+    int* nodes = (int*)malloc(sizeof(int*) * num_os_pages);
+    int* status = (int*)malloc(sizeof(int*) * num_os_pages);
+    for (uint32_t i = 0; i < num_os_pages; ++i) {
+        pages[i] = addr + i * os_page_size_;
+        nodes[i] = target_node;
+        status[i] = 0;
+    }
+    // int ret = numa_move_pages(0, num_os_pages, pages, nodes, status, 0);
+    int ret = move_pages(0, num_os_pages, pages, nodes, status, 0);
+    if (ret != 0) {
+        std::cout << "Page migration failed with retcode=" << ret << std::endl;
+    }
+    if (verbose || ret != 0) {
+        for (uint32_t i = 0; i < num_os_pages; ++i) {
+            bool to_print = (status[i] < 0 || status[i] != target_node ||
+                             i <= 2 || i >= num_os_pages - 2);
+            if (to_print) {
+                std::cout << std::hex << "0x" << reinterpret_cast<uint64_t>(pages[i])
+                    << std::dec << "\t" << i << "\t";
+            }
+            if (status[i] >= 0) {
+                if (to_print) {
+                    std::cout << "to node " << status[i];
+                }
+            } else if (status[i] == -EACCES) {
+                std::cout << "mapped by multiple procs";
+            } else if (status[i] == -EBUSY) {
+                std::cout << "page busy";
+            } else if (status[i] == -EFAULT) {
+                std::cout << "fault b/c zero page or not mapped";
+            } else if (status[i] == -EIO) {
+                std::cout << "unable to write-back page";
+            } else if (status[i] == -EINVAL) {
+                std::cout << "the dirty page cannot be moved";
+            } else if (status[i] == -ENOENT) {
+                std::cout << "page is not present";
+            } else if (status[i] == -ENOMEM) {
+                std::cout << "unable to allocate on target node";
+            } else {
+                std::cout << "unknown errno";
+            }
+            if (to_print) {
+                std::cout << std::endl;
+            }
+        }
+    }
+}
+
+void MemRegion::migrate(int target_node)
+{
+    if (size_region1_ > 0) {
+        migratePages_(addr1_, size_region1_, target_node);
+    }
+    if (size_region2_ > 0) {
+        migratePages_(addr2_, size_region2_, target_node);
+    }
 }
 
 void MemRegion::dump()
