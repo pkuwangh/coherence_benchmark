@@ -59,7 +59,7 @@ void end_timer(const std::string& timer_key, std::ostream& os, uint64_t num_refs
         const double elapsed_time = end_timer(timer_key, os);
         std::string out_str = "per-ref(ns)=" + std::to_string(1000000000 * elapsed_time / num_refs);
         out_str += ", per-ref(cycle)=" + std::to_string(1000000000 * elapsed_time / num_refs * core_freq_ghz);
-        out_str += "\n";
+        out_str += "\n\n";
         os << out_str;
     }
 }
@@ -71,7 +71,7 @@ void end_timer(const std::string& timer_key, std::ostream& os, uint64_t size, ui
         std::string out_str = "bw(MBpS)=" + std::to_string(bw_bps / 1024 / 1024);
         out_str += ", bw(BytesPerNs)=" + std::to_string(bw_bps / 1000000000);
         out_str += ", bw(BytesPerCycle)=" + std::to_string(bw_bps / 1000000000 / core_freq_ghz);
-        out_str += "\n";
+        out_str += "\n\n";
         os << out_str;
     }
 }

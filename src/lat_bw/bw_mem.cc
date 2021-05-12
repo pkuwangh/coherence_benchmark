@@ -10,7 +10,7 @@
 void print_usage() {
     std::cout << "[./bw_mem] [total size in KB] [action] [warmup iters] [main iters] [core freq] <region2 type> <region2 size> <active size in KB>" << std::endl;
     std::cout << "\tavailable action: prd, pwr, prmw, pcp, frd, fwr, frmw, fcp" << std::endl;
-    std::cout << "\tregion2 type: native, remote, device" << std::endl;
+    std::cout << "\tregion2 type: native, remote, remote1, remote2, device" << std::endl;
     std::cout << "\tregion2 size: subset of total size, in KB" << std::endl;
     std::cout << "\tactive size: subset of total size, in KB" << std::endl;
     std::cout << "Example: ./bw_mem 4096 prd 10 100 2.3" << std::endl;
@@ -47,7 +47,11 @@ int main(int argc, char **argv)
     if (argc >= 8) {
         const std::string r2_type_str = argv[6];
         if (r2_type_str == "remote" || r2_type_str == "Remote") {
-            region2_type = utils::MemType::REMOTE;
+            region2_type = utils::MemType::REMOTE1;
+        } else if (r2_type_str == "remote1" || r2_type_str == "Remote1") {
+            region2_type = utils::MemType::REMOTE1;
+        } else if (r2_type_str == "remote2" || r2_type_str == "Remote2") {
+            region2_type = utils::MemType::REMOTE2;
         } else if (r2_type_str == "device" || r2_type_str == "Device") {
             region2_type = utils::MemType::DEVICE;
         }

@@ -52,7 +52,8 @@ MemRegion::MemRegion(
     if (size_region2_ > 0) {
         if (mem_type_region2_ == MemType::NATIVE) {
             addr2_ = allocNative_(size_region2_, raw_addr2_, raw_size2_);
-        } else if (mem_type_region2_ == MemType::REMOTE) {
+        } else if (mem_type_region2_ == MemType::REMOTE1 ||
+                   mem_type_region2_ == MemType::REMOTE2) {
             addr2_ = allocRemote_(size_region2_, raw_addr2_, raw_size2_);
         } else {
             addr2_ = allocDevice_(size_region2_, raw_addr2_, raw_size2_);
@@ -81,7 +82,8 @@ MemRegion::~MemRegion() {
             } else {
                 free(raw_addr2_);
             }
-        } else if (mem_type_region2_ == MemType::REMOTE) {
+        } else if (mem_type_region2_ == MemType::REMOTE1 ||
+                   mem_type_region2_ == MemType::REMOTE2) {
             numa_free(raw_addr2_, raw_size2_);
         } else {
             munmap(addr2_, size_region2_);
@@ -131,7 +133,11 @@ char* MemRegion::allocRemote_(const uint64_t& size, char*& raw_addr, uint64_t& r
         error_("not yet support hugepage on remote node");
     } else {
         raw_size = size + os_page_size_;
-        raw_addr = (char*)numa_alloc_onnode(raw_size, 1);
+        if (mem_type_region2_ == MemType::REMOTE2) {
+            raw_addr = (char*)numa_alloc_onnode(raw_size, 2);
+        } else {
+            raw_addr = (char*)numa_alloc_onnode(raw_size, 1);
+        }
         addr = raw_addr + os_page_size_ - (uint64_t)raw_addr % os_page_size_;
         std::cout << "remote numa_malloc" << std::endl;
     }

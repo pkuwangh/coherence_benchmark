@@ -8,9 +8,10 @@
 namespace utils {
 
 enum class MemType : char {
-  NATIVE='N',
-  REMOTE='R',
-  DEVICE='D',
+  NATIVE,
+  REMOTE1,
+  REMOTE2,
+  DEVICE,
 };
 
 

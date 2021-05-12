@@ -12,7 +12,7 @@ void print_usage() {
     std::cout << "\ttotal size & page size in KB; stride size in B" << std::endl;
     std::cout << "\tavailable patterns: stride, pageRand, allRand" << std::endl;
     std::cout << "\tOS page: default, hugePage" << std::endl;
-    std::cout << "\tregion2 type: native, remote, device" << std::endl;
+    std::cout << "\tregion2 type: native, remote, remote1, remote2, device" << std::endl;
     std::cout << "\tregion2 size: subset of total size, in KB" << std::endl;
     std::cout << "\tactiive size: subset of total size, in KB" << std::endl;
     std::cout << "Example: ./lat_mem_rd 4096 4 64 pageRand 10 100 2.3" << std::endl;
@@ -50,7 +50,11 @@ int main(int argc, char **argv)
     if (argc >= 11) {
         const std::string r2_type_str = argv[9];
         if (r2_type_str == "remote" || r2_type_str == "Remote") {
-          region2_type = utils::MemType::REMOTE;
+          region2_type = utils::MemType::REMOTE1;
+        } else if (r2_type_str == "remote1" || r2_type_str == "Remote1") {
+          region2_type = utils::MemType::REMOTE1;
+        } else if (r2_type_str == "remote2" || r2_type_str == "Remote2") {
+          region2_type = utils::MemType::REMOTE2;
         } else if (r2_type_str == "device" || r2_type_str == "Device") {
             region2_type = utils::MemType::DEVICE;
         }

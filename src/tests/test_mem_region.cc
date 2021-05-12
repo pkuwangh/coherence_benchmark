@@ -65,7 +65,7 @@ int main() {
     test({2097152, 2097152, 1048576, 64}, false, utils::MemType::NATIVE, 0, "stride");
 
     // -- numa_alloc
-    test({8192, 8192, 4096, 512}, false, utils::MemType::REMOTE, 8192, "stride");
+    test({8192, 8192, 4096, 512}, false, utils::MemType::REMOTE1, 8192, "stride");
 
     // -- active size
     test({8192, 4096, 4096, 512}, false, utils::MemType::NATIVE, 0, "stride");
