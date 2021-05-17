@@ -26,7 +26,7 @@ int main(int argc, char **argv)
         std::cout << "start address not aligned to page boundary" << std::endl;
         return 1;
     }
-    const bool verbose = true;
+    const bool verbose = 0;
     void** pages = (void**)malloc(sizeof(char*) * num_pages);
     int* nodes = (int*)malloc(sizeof(int*) * num_pages);
     int* status = (int*)malloc(sizeof(int*) * num_pages);
@@ -38,11 +38,10 @@ int main(int argc, char **argv)
     int ret = move_pages(pid, num_pages, pages, nodes, status, 0);
     if (ret != 0) {
         std::cout << "Page migration failed with retcode=" << ret << std::endl;
-    }
-    if (verbose || ret != 0) {
+    } else {
         for (uint32_t i = 0; i < num_pages; ++i) {
             bool to_print = (status[i] < 0 || status[i] != target_node ||
-                             i <= 2 || i >= num_pages - 2);
+                             i <= 2 || i + 2 >= num_pages || verbose);
             if (to_print) {
                 std::cout << std::hex << "0x" << reinterpret_cast<uint64_t>(pages[i])
                     << std::dec << "\t" << i << "\t";

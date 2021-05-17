@@ -45,6 +45,7 @@ MemRegion::MemRegion(
         addr1_ = allocNative_(size_region1_, raw_addr1_, raw_size1_);
         std::cout << "Region-1 addr=0x" << std::hex << reinterpret_cast<uint64_t>(addr1_)
             << " raw_addr=0x" << reinterpret_cast<uint64_t>(raw_addr1_)
+            << " end_addr=0x" << reinterpret_cast<uint64_t>(addr1_ + size_region1_)
             << " 4K-page=" << std::dec << raw_size1_ / os_page_size_ << std::endl;
         memset(addr1_, 0, size_region1_);
     }
@@ -60,6 +61,7 @@ MemRegion::MemRegion(
         }
         std::cout << "Region-2 addr=0x" << std::hex << reinterpret_cast<uint64_t>(addr2_)
             << " raw_addr=0x" << reinterpret_cast<uint64_t>(raw_addr2_)
+            << " end_addr=0x" << reinterpret_cast<uint64_t>(addr2_ + size_region2_)
             << " 4K-page=" << std::dec << raw_size2_ / os_page_size_ << std::endl;
         memset(addr2_, 0, size_region2_);
     }
