@@ -108,6 +108,9 @@ class ThreadPacket: public utils::BaseThreadPacket {
     char** getStartPoint(const uint32_t& part_idx) const {
         return mem_setup_->mem_regions_[part_idx]->getStartPoint();
     }
+    char** getHalfPoint(const uint32_t& part_idx) const {
+        return mem_setup_->mem_regions_[part_idx]->getHalfPoint();
+    }
 
     pthread_mutex_t* getFlowMutex (const uint32_t& part_idx) { return mem_setup_->mem_regions_[part_idx]->flow_mutex.get(); }
     pthread_cond_t*  getFlowCond  (const uint32_t& part_idx) { return mem_setup_->mem_regions_[part_idx]->flow_cond.get(); }
@@ -131,6 +134,8 @@ class ThreadPacket: public utils::BaseThreadPacket {
     // pattern
     void setReadOnly(bool v) { read_only_ = v; }
     const bool& isReadOnly() const { return read_only_; }
+    void setDualStream(bool v) { dual_stream_ = v; }
+    const bool& isDualStream() const { return dual_stream_; }
     // timer control
     void setTimerEnabled(bool v = true) { timer_enabled_ = v; }
     const bool& isTimerEnabled() const { return timer_enabled_; }
@@ -140,6 +145,7 @@ class ThreadPacket: public utils::BaseThreadPacket {
     uint32_t bad_status_;
     utils::Timer timer_;
     bool read_only_ = false;
+    bool dual_stream_ = false;
     bool timer_enabled_ = false;
 };
 

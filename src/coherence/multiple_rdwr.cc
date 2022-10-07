@@ -14,6 +14,7 @@ void *thread_rmw(void *ptr)
     ThreadPacket* pkt = static_cast<ThreadPacket*>(ptr);
     // pointer chasing
     register char** p = NULL;
+    register char** p2 = NULL;
     register uint32_t k = 0;
     // loop iterations, loop partitions
     for (uint32_t i = 0; i < pkt->getNumIterations(); ++i) {
@@ -33,6 +34,14 @@ void *thread_rmw(void *ptr)
             if (pkt->isReadOnly()) {
                 for (k = 0; k < num_chases; ++k) {
                     p = (char**)(*p);
+                }
+            } else if (pkt->isDualStream()) {
+                p2 = pkt->getHalfPoint(part_idx);
+                 for (k = 0; k < num_chases / 2; ++k) {
+                    *(p + 4) += 1;
+                    *(p2 + 4) += 1;
+                    p = (char**)(*p);
+                    p2 = (char**)(*p2);
                 }
             } else {
                 for (k = 0; k < num_chases; ++k) {
@@ -95,6 +104,7 @@ int main(int argc, char** argv)
         //if (i % 2 == 1) {
         //    threads.getPacket(i).setReadOnly(true);
         //}
+        threads.getPacket(i).setDualStream(true);
     }
     utils::end_timer("startup", std::cout);
     // warmup
